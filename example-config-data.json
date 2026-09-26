@@ -55,7 +55,16 @@
       ],
       "dayFields": [
         { "id": "area", "label": "Obszar działania", "type": "textarea", "defaultValue": "" }
-      ]
+      ],
+      "collaborationRecords": {
+        "title": "Współpraca z osobami",
+        "attributes": [
+          { "id": "person", "label": "Osoba / kontakt", "name": "Osoba / kontakt", "type": "textarea", "defaultValue": "" },
+          { "id": "institution", "label": "Instytucja / dział", "name": "Instytucja / dział", "type": "textarea", "defaultValue": "" },
+          { "id": "topic", "label": "Temat współpracy", "name": "Temat współpracy", "type": "textarea", "defaultValue": "" },
+          { "id": "notes", "label": "Uwagi", "name": "Uwagi", "type": "textarea", "defaultValue": "" }
+        ]
+      }
     },
     "profiles": [
       {
@@ -76,7 +85,16 @@
           ],
           "dayFields": [
             { "id": "area", "label": "Obszar działania", "type": "textarea", "defaultValue": "" }
-          ]
+          ],
+          "collaborationRecords": {
+            "title": "Współpraca z osobami",
+            "attributes": [
+              { "id": "person", "label": "Osoba / kontakt", "name": "Osoba / kontakt", "type": "textarea", "defaultValue": "" },
+              { "id": "institution", "label": "Instytucja / dział", "name": "Instytucja / dział", "type": "textarea", "defaultValue": "" },
+              { "id": "topic", "label": "Temat współpracy", "name": "Temat współpracy", "type": "textarea", "defaultValue": "" },
+              { "id": "notes", "label": "Uwagi", "name": "Uwagi", "type": "textarea", "defaultValue": "" }
+            ]
+          }
         }
       }
     ],
@@ -99,7 +117,16 @@
           ],
           "dayFields": [
             { "id": "area", "label": "Obszar działania", "type": "textarea", "defaultValue": "" }
-          ]
+          ],
+          "collaborationRecords": {
+            "title": "Współpraca z osobami",
+            "attributes": [
+              { "id": "person", "label": "Osoba / kontakt", "name": "Osoba / kontakt", "type": "textarea", "defaultValue": "" },
+              { "id": "institution", "label": "Instytucja / dział", "name": "Instytucja / dział", "type": "textarea", "defaultValue": "" },
+              { "id": "topic", "label": "Temat współpracy", "name": "Temat współpracy", "type": "textarea", "defaultValue": "" },
+              { "id": "notes", "label": "Uwagi", "name": "Uwagi", "type": "textarea", "defaultValue": "" }
+            ]
+          }
         }
       }
     ],
