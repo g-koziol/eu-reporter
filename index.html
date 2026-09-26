@@ -190,7 +190,7 @@
       <div id="limitBox">
         <div class="stats">
           <div class="stat">Wypracowano <b id="totalHours">0:00 h</b></div>
-          <div class="stat">Pozostało do 100 h <b id="remainingHours">100:00 h</b></div>
+          <div class="stat"><span id="remainingTargetLabel">Pozostało do 100 h</span> <b id="remainingHours">100:00 h</b></div>
           <div class="stat">Liczba działań <b id="actionCount">0</b></div>
         </div>
         <div class="progress"><div id="progressBar"></div></div>
@@ -1142,10 +1142,13 @@
             count += 1;
           });
         });
-        const targetMinutes = getMonthTargetHours() * 60;
+        const targetHours = getMonthTargetHours();
+        const targetMinutes = targetHours * 60;
+        const remainingMinutes = Math.max(0, targetMinutes - totalMinutes);
 
         $("#totalHours").textContent = fmtMin(totalMinutes);
-        $("#remainingHours").textContent = fmtMin(Math.max(0, targetMinutes - totalMinutes));
+        $("#remainingTargetLabel").textContent = `Pozostało do ${targetHours} h`;
+        $("#remainingHours").textContent = fmtMin(remainingMinutes);
         $("#actionCount").textContent = String(count);
         const pct = Math.min(100, (totalMinutes / Math.max(targetMinutes, 1)) * 100);
         $("#progressBar").style.width = `${pct}%`;
@@ -1234,10 +1237,15 @@
                 <input type="time" data-profile-work-to value="${esc(profile.config.workTo || DEFAULT_WORK_TO)}" step="${stepForResolution(profile.config.timeResolution || DEFAULT_RESOLUTION)}">
               </label>
             </div>
-            <label style="margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-              <input type="checkbox" data-profile-collapse-empty-days ${profile.config.collapseEmptyDaysByDefault ? "checked" : ""}>
-              <span>Zwijaj puste dni domyślnie</span>
-            </label>
+            <div class="row2" style="margin-bottom:12px;">
+              <label>Cel godzin na miesiąc
+                <input type="number" min="0" step="1" data-profile-target-hours value="${esc(profile.config.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS)}">
+              </label>
+              <label style="display:flex;align-items:center;gap:8px; height:100%;">
+                <input type="checkbox" data-profile-collapse-empty-days ${profile.config.collapseEmptyDaysByDefault ? "checked" : ""}>
+                <span>Zwijaj puste dni domyślnie</span>
+              </label>
+            </div>
 
             <div class="small">Typy wpisów pracy</div>
             <div style="display:grid;gap:8px;margin:8px 0;">
@@ -1281,10 +1289,15 @@
                 <input type="time" data-project-work-to value="${esc(project.config.workTo || DEFAULT_WORK_TO)}" step="${stepForResolution(project.config.timeResolution || DEFAULT_RESOLUTION)}">
               </label>
             </div>
-            <label style="margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-              <input type="checkbox" data-project-collapse-empty-days ${project.config.collapseEmptyDaysByDefault ? "checked" : ""}>
-              <span>Zwijaj puste dni domyślnie</span>
-            </label>
+            <div class="row2" style="margin-bottom:12px;">
+              <label>Cel godzin na miesiąc
+                <input type="number" min="0" step="1" data-project-target-hours value="${esc(project.config.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS)}">
+              </label>
+              <label style="display:flex;align-items:center;gap:8px; height:100%;">
+                <input type="checkbox" data-project-collapse-empty-days ${project.config.collapseEmptyDaysByDefault ? "checked" : ""}>
+                <span>Zwijaj puste dni domyślnie</span>
+              </label>
+            </div>
 
             <div class="small">Typy wpisów pracy</div>
             <div style="display:grid;gap:8px;margin:8px 0;">
@@ -1346,17 +1359,22 @@
                     <option value="hour" ${(globalCfg.timeResolution || DEFAULT_RESOLUTION) === "hour" ? "selected" : ""}>Godziny</option>
                   </select>
                 </label>
+                <label>Cel godzin na miesiąc
+                  <input id="globalTargetHours" type="number" min="0" step="1" value="${esc(globalCfg.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS)}">
+                </label>
+              </div>
+              <div class="row2" style="margin-top:10px;">
                 <label>Domyślny zakres dnia
                   <div class="row2" style="grid-template-columns:1fr 1fr;">
                     <input id="globalWorkFrom" type="time" value="${esc(globalCfg.workFrom || DEFAULT_WORK_FROM)}" step="${stepForResolution(globalCfg.timeResolution || DEFAULT_RESOLUTION)}">
                     <input id="globalWorkTo" type="time" value="${esc(globalCfg.workTo || DEFAULT_WORK_TO)}" step="${stepForResolution(globalCfg.timeResolution || DEFAULT_RESOLUTION)}">
                   </div>
                 </label>
+                <label style="align-self:end;display:flex;align-items:center;gap:8px; height:100%;">
+                  <input id="globalCollapseEmptyDays" type="checkbox" ${globalCfg.collapseEmptyDaysByDefault ? "checked" : ""}>
+                  <span>Zwijaj puste dni automatycznie</span>
+                </label>
               </div>
-              <label style="margin-top:10px;display:flex;align-items:center;gap:8px;">
-                <input id="globalCollapseEmptyDays" type="checkbox" ${globalCfg.collapseEmptyDaysByDefault ? "checked" : ""}>
-                <span>Zwijaj puste dni automatycznie</span>
-              </label>
               <div class="small">Konfiguracja jest wersjonowana. Obecna wersja: ${config.version || DEFAULT_VERSION}</div>
             </section>
 
@@ -1439,6 +1457,15 @@
           saveDb();
         });
 
+        $("#globalTargetHours").addEventListener("input", (event) => {
+          const rawValue = Number(event.target.value);
+          const value = Number.isFinite(rawValue) && rawValue >= 0 ? Math.max(0, Math.round(rawValue)) : DEFAULT_TARGET_HOURS;
+          db.config.global.targetHoursPerMonth = value;
+          event.target.value = value;
+          saveDb();
+          updateStats();
+        });
+
         $("#globalCollapseEmptyDays").addEventListener("change", (event) => {
           db.config.global.collapseEmptyDaysByDefault = Boolean(event.target.checked);
           saveDb();
@@ -1519,6 +1546,17 @@
               workToInput.value = value;
               profile.config.workTo = value || DEFAULT_WORK_TO;
               saveDb();
+            });
+          }
+
+          const targetHoursInput = card.querySelector("[data-profile-target-hours]");
+          if (targetHoursInput) {
+            targetHoursInput.addEventListener("input", () => {
+              const value = Number(targetHoursInput.value);
+              profile.config.targetHoursPerMonth = Number.isFinite(value) && value >= 0 ? Math.max(0, Math.round(value)) : DEFAULT_TARGET_HOURS;
+              targetHoursInput.value = profile.config.targetHoursPerMonth;
+              saveDb();
+              updateStats();
             });
           }
 
@@ -1718,6 +1756,17 @@
               workToInput.value = value;
               project.config.workTo = value || DEFAULT_WORK_TO;
               saveDb();
+            });
+          }
+
+          const targetHoursInput = card.querySelector("[data-project-target-hours]");
+          if (targetHoursInput) {
+            targetHoursInput.addEventListener("input", () => {
+              const value = Number(targetHoursInput.value);
+              project.config.targetHoursPerMonth = Number.isFinite(value) && value >= 0 ? Math.max(0, Math.round(value)) : DEFAULT_TARGET_HOURS;
+              targetHoursInput.value = project.config.targetHoursPerMonth;
+              saveDb();
+              updateStats();
             });
           }
 
