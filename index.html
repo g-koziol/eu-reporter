@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ewidencja działań projektowych</title>
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#fff; --text:#1f2937; --muted:#6b7280; --line:#dbe1ea;
+    --accent:#2563eb; --danger:#b91c1c; --ok:#15803d; --warn:#b45309;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+  header{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);padding:12px}
+  .wrap{max-width:1500px;margin:auto}
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button,.btn,input,select,textarea{font:inherit}
+  button,.btn{border:1px solid var(--line);background:white;border-radius:8px;padding:8px 11px;cursor:pointer}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.danger{color:var(--danger)}
+  input,select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;background:white}
+  textarea{min-height:72px;resize:vertical}
+  .stats{display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:8px;margin-top:10px}
+  .stat{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:10px}
+  .stat b{display:block;font-size:1.2rem}
+  .weeks{padding:14px 0 40px}
+  .week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin-bottom:10px}
+  .day{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;min-width:0}
+  .day.off{opacity:.45}
+  .day-head{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);background:#fbfcfe}
+  .day-title{font-weight:700}
+  .day-total{font-size:.9rem;color:var(--muted)}
+  .day-body{padding:10px;display:grid;gap:8px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  label{font-size:.82rem;color:var(--muted);display:grid;gap:4px}
+  details{border:1px solid var(--line);border-radius:9px;background:#fff}
+  summary{padding:9px;cursor:pointer;font-weight:600}
+  .actions{padding:0 9px 9px;display:grid;gap:8px}
+  .action{border:1px dashed var(--line);border-radius:8px;padding:8px;display:grid;gap:7px}
+  .action-top{display:grid;grid-template-columns:1.4fr .8fr .8fr auto;gap:6px;align-items:end}
+  .small{font-size:.8rem;color:var(--muted)}
+  .progress{height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin-top:8px}
+  .progress > div{height:100%;background:var(--accent);width:0}
+  .limit-over .progress > div{background:var(--danger)}
+  .limit-over #totalHours{color:var(--danger)}
+  .hidden{display:none!important}
+  .footer-note{font-size:.84rem;color:var(--muted);padding:4px 0}
+  @media (max-width:1100px){.week{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media (max-width:700px){
+    header{position:static}
+    .week{grid-template-columns:1fr}
+    .stats{grid-template-columns:1fr}
+    .action-top,.row2{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="toolbar">
+      <strong>Ewidencja działań projektowych</strong>
+      <label style="width:auto">Miesiąc
+        <input id="monthPicker" type="month" style="width:auto">
+      </label>
+      <button class="primary" id="exportBtn">Eksport JSON</button>
+      <label class="btn">Import JSON
+        <input id="importInput" type="file" accept="application/json,.json" class="hidden">
+      </label>
+      <button id="clearBtn" class="danger">Wyczyść bieżący miesiąc</button>
+    </div>
+    <div id="limitBox">
+      <div class="stats">
+        <div class="stat">Wypracowano <b id="totalHours">0:00 h</b></div>
+        <div class="stat">Pozostało do 100 h <b id="remainingHours">100:00 h</b></div>
+        <div class="stat">Liczba działań <b id="actionCount">0</b></div>
+      </div>
+      <div class="progress"><div id="progressBar"></div></div>
+    </div>
+    <div class="footer-note">Dane zapisują się automatycznie w tej przeglądarce. Eksport JSON służy jako kopia zapasowa i do przenoszenia danych.</div>
+  </div>
+</header>
+
+<main class="wrap weeks" id="calendar"></main>
+
+<script>
+(() => {
+  const LIMIT_MIN = 100 * 60;
+  const STORAGE_KEY = "ewidencjaProjektowa_v1";
+  const categories = [
+    "Współpraca z OPS",
+    "Kontakt z instytucją",
+    "Działania interwencyjne",
+    "Praca administracyjno-organizacyjna",
+    "Inne"
+  ];
+
+  const $ = s => document.querySelector(s);
+  const pad = n => String(n).padStart(2,"0");
+  const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const ym = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+
+  let db = loadDb();
+  let currentMonth = ym(new Date());
+  $("#monthPicker").value = currentMonth;
+
+  function loadDb(){
+    try{
+      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {version:1, months:{}};
+    }catch(e){
+      return {version:1, months:{}};
+    }
+  }
+
+  function saveDb(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  }
+
+  function ensureMonth(key){
+    if(!db.months[key]) db.months[key] = {days:{}};
+    return db.months[key];
+  }
+
+  function ensureDay(date){
+    const m = ensureMonth(currentMonth);
+    if(!m.days[date]){
+      m.days[date] = {
+        workFrom:"",
+        workTo:"",
+        area:"",
+        nextPlan:"",
+        risks:"",
+        notes:"",
+        actions:[]
+      };
+    }
+    return m.days[date];
+  }
+
+  function esc(s=""){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function timeToMin(t){
+    if(!t || !/^\d{2}:\d{2}$/.test(t)) return null;
+    const [h,m] = t.split(":").map(Number);
+    return h*60+m;
+  }
+
+  function actionMinutes(a){
+    const s=timeToMin(a.from), e=timeToMin(a.to);
+    if(s===null || e===null) return 0;
+    return e>=s ? e-s : (24*60-s)+e;
+  }
+
+  function fmtMin(min){
+    min=Math.max(0,Math.round(min));
+    return `${Math.floor(min/60)}:${pad(min%60)} h`;
+  }
+
+  function monthGrid(key){
+    const [y,m] = key.split("-").map(Number);
+    const first = new Date(y,m-1,1);
+    const last = new Date(y,m,0);
+    const mondayIndex = (first.getDay()+6)%7;
+    const start = new Date(first);
+    start.setDate(first.getDate()-mondayIndex);
+
+    const sundayIndex = (last.getDay()+6)%7;
+    const end = new Date(last);
+    end.setDate(last.getDate()+(6-sundayIndex));
+
+    const days=[];
+    for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)) days.push(new Date(d));
+    return days;
+  }
+
+  function render(){
+    const cal=$("#calendar");
+    cal.innerHTML="";
+    const days=monthGrid(currentMonth);
+    const [cy,cm]=currentMonth.split("-").map(Number);
+    const names=["Pon","Wt","Śr","Czw","Pt","Sob","Nd"];
+
+    for(let i=0;i<days.length;i+=7){
+      const w=document.createElement("section");
+      w.className="week";
+      days.slice(i,i+7).forEach((d,idx)=>{
+        const inMonth = d.getFullYear()===cy && d.getMonth()+1===cm;
+        const date=iso(d);
+        const data=inMonth ? ensureDay(date) : null;
+        const total=inMonth ? data.actions.reduce((s,a)=>s+actionMinutes(a),0) : 0;
+
+        const el=document.createElement("article");
+        el.className="day"+(inMonth?"":" off");
+        el.innerHTML=`
+          <div class="day-head">
+            <div class="day-title">${names[idx]} ${pad(d.getDate())}.${pad(d.getMonth()+1)}</div>
+            <div class="day-total">${fmtMin(total)}</div>
+          </div>
+          ${inMonth ? dayForm(date,data) : `<div class="day-body small">Poza wybranym miesiącem</div>`}
+        `;
+        cal.appendChild(w);
+        w.appendChild(el);
+      });
+    }
+    bindInputs();
+    updateStats();
+  }
+
+  function dayForm(date,d){
+    return `
+    <div class="day-body" data-date="${date}">
+      <div class="row2">
+        <label>Zakres dnia od
+          <input type="time" data-field="workFrom" value="${esc(d.workFrom)}">
+        </label>
+        <label>Zakres dnia do
+          <input type="time" data-field="workTo" value="${esc(d.workTo)}">
+        </label>
+      </div>
+
+      <label>Obszar działania
+        <textarea data-field="area" placeholder="Ogólny obszar działań w tym dniu">${esc(d.area)}</textarea>
+      </label>
+
+      <details open>
+        <summary>Działania w ciągu dnia (${d.actions.length})</summary>
+        <div class="actions">
+          ${d.actions.map((a,i)=>actionForm(i,a)).join("")}
+          <button type="button" data-add-action>+ Dodaj działanie</button>
+        </div>
+      </details>
+
+      <label>Plan dalszych działań
+        <textarea data-field="nextPlan" placeholder="Co dalej?">${esc(d.nextPlan)}</textarea>
+      </label>
+
+      <label>Trudności / ryzyka
+        <textarea data-field="risks" placeholder="Problemy, ryzyka, bariery">${esc(d.risks)}</textarea>
+      </label>
+
+      <label>Uwagi do dnia
+        <textarea data-field="notes" placeholder="Dodatkowe uwagi">${esc(d.notes)}</textarea>
+      </label>
+    </div>`;
+  }
+
+  function actionForm(i,a){
+    return `
+    <div class="action" data-action="${i}">
+      <div class="action-top">
+        <label>Kategoria
+          <select data-afield="category">
+            ${categories.map(c=>`<option ${a.category===c?"selected":""}>${esc(c)}</option>`).join("")}
+          </select>
+        </label>
+        <label>Od
+          <input type="time" data-afield="from" value="${esc(a.from||"")}">
+        </label>
+        <label>Do
+          <input type="time" data-afield="to" value="${esc(a.to||"")}">
+        </label>
+        <button type="button" class="danger" data-remove-action>Usuń</button>
+      </div>
+      <label>Opis działania
+        <textarea data-afield="description" placeholder="Co zostało wykonane?">${esc(a.description||"")}</textarea>
+      </label>
+      <label>Uwagi do działania
+        <textarea data-afield="notes" placeholder="Dodatkowe informacje">${esc(a.notes||"")}</textarea>
+      </label>
+      <div class="small">Czas działania: <span data-action-duration>${fmtMin(actionMinutes(a))}</span></div>
+    </div>`;
+  }
+
+  function bindInputs(){
+    document.querySelectorAll(".day-body[data-date]").forEach(dayEl=>{
+      const date=dayEl.dataset.date;
+
+      dayEl.querySelectorAll("[data-field]").forEach(input=>{
+        input.addEventListener("input",()=>{
+          ensureDay(date)[input.dataset.field]=input.value;
+          saveDb();
+        });
+      });
+
+      dayEl.querySelector("[data-add-action]").addEventListener("click",()=>{
+        ensureDay(date).actions.push({
+          category:categories[0], from:"", to:"", description:"", notes:""
+        });
+        saveDb(); render();
+      });
+
+      dayEl.querySelectorAll(".action").forEach(actionEl=>{
+        const index=Number(actionEl.dataset.action);
+        actionEl.querySelectorAll("[data-afield]").forEach(input=>{
+          input.addEventListener("input",()=>{
+            ensureDay(date).actions[index][input.dataset.afield]=input.value;
+            saveDb();
+            const span=actionEl.querySelector("[data-action-duration]");
+            span.textContent=fmtMin(actionMinutes(ensureDay(date).actions[index]));
+            const total=ensureDay(date).actions.reduce((s,a)=>s+actionMinutes(a),0);
+            dayEl.closest(".day").querySelector(".day-total").textContent=fmtMin(total);
+            updateStats();
+          });
+        });
+        actionEl.querySelector("[data-remove-action]").addEventListener("click",()=>{
+          ensureDay(date).actions.splice(index,1);
+          saveDb(); render();
+        });
+      });
+    });
+  }
+
+  function updateStats(){
+    const m=ensureMonth(currentMonth);
+    let min=0,count=0;
+    Object.values(m.days).forEach(d=>{
+      (d.actions||[]).forEach(a=>{ min+=actionMinutes(a); count++; });
+    });
+    $("#totalHours").textContent=fmtMin(min);
+    $("#remainingHours").textContent=fmtMin(Math.max(0,LIMIT_MIN-min));
+    $("#actionCount").textContent=count;
+    const pct=Math.min(100,(min/LIMIT_MIN)*100);
+    $("#progressBar").style.width=pct+"%";
+    $("#limitBox").classList.toggle("limit-over", min>LIMIT_MIN);
+  }
+
+  $("#monthPicker").addEventListener("change", e=>{
+    currentMonth=e.target.value || currentMonth;
+    render();
+  });
+
+  $("#exportBtn").addEventListener("click",()=>{
+    saveDb();
+    const payload={
+      app:"Ewidencja działań projektowych",
+      version:1,
+      exportedAt:new Date().toISOString(),
+      data:db
+    };
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download=`ewidencja-${currentMonth}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+  });
+
+  $("#importInput").addEventListener("change", async e=>{
+    const file=e.target.files?.[0];
+    if(!file) return;
+    try{
+      const parsed=JSON.parse(await file.text());
+      const incoming=parsed.data || parsed;
+      if(!incoming || typeof incoming!=="object" || !incoming.months) throw new Error("Nieprawidłowy format");
+      db=incoming;
+      saveDb();
+      render();
+      alert("Import zakończony.");
+    }catch(err){
+      alert("Nie udało się wczytać pliku JSON: "+err.message);
+    }finally{
+      e.target.value="";
+    }
+  });
+
+  $("#clearBtn").addEventListener("click",()=>{
+    if(confirm(`Usunąć wszystkie dane dla ${currentMonth}?`)){
+      delete db.months[currentMonth];
+      saveDb();
+      render();
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
