@@ -94,6 +94,53 @@
     .limit-over #totalHours { color: var(--danger); }
     .hidden { display: none !important; }
     .footer-note { font-size: .84rem; color: var(--muted); padding: 4px 0; }
+    .page-info {
+      margin: 18px auto 0;
+      padding: 18px 20px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.03);
+    }
+    .page-info h2 {
+      margin: 0 0 8px;
+      font-size: 1.1rem;
+    }
+    .page-info p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .page-info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .page-info-item {
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .page-info-item strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: .9rem;
+    }
+    .page-info-item span {
+      color: var(--muted);
+      font-size: .82rem;
+      line-height: 1.45;
+    }
+    .page-footer {
+      max-width: 1500px;
+      margin: 0 auto 24px;
+      padding: 12px 12px 0;
+      color: var(--muted);
+      font-size: .82rem;
+      border-top: 1px solid var(--line);
+    }
     .modal {
       position: fixed; inset: 0; background: rgba(15, 23, 42, 0.42); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 20;
     }
@@ -148,11 +195,34 @@
         </div>
         <div class="progress"><div id="progressBar"></div></div>
       </div>
-      <div class="footer-note">Dane zapisują się automatycznie w tej przeglądarce. Eksport JSON służy jako kopia zapasowa i do przenoszenia danych.</div>
+      <div class="footer-note">Dane zapisują się automatycznie w tej przeglądarce. Eksport JSON służy jako kopia zapasowa i do przenosowania danych.</div>
     </div>
   </header>
 
+  <section class="wrap page-info" aria-label="Informacje o stronie">
+    <h2>Informacje o stronie</h2>
+    <p>Ta aplikacja służy do ewidencji czasu pracy w ramach projektów i działań. Umożliwia szybkie zapisanie godzin, kontrolę limitu oraz eksport danych do pliku JSON.</p>
+    <div class="page-info-grid">
+      <div class="page-info-item">
+        <strong>Planowanie</strong>
+        <span>Przeglądaj miesięczne zestawienia i poruszaj się po dniach z poziomym panelem nawigacyjnym.</span>
+      </div>
+      <div class="page-info-item">
+        <strong>Kontrola czasu</strong>
+        <span>Widzisz wypracowane godziny, pozostały limit i liczbę dodanych działań w każdej chwili.</span>
+      </div>
+      <div class="page-info-item">
+        <strong>Bezpieczne dane</strong>
+        <span>Wszystkie dane są zapisywane lokalnie w przeglądarce i mogą być łatwo wyeksportowane jako backup.</span>
+      </div>
+    </div>
+  </section>
+
   <main class="wrap weeks" id="calendar"></main>
+
+  <footer class="page-footer">
+    © 2026 Ewidencja działań projektowych · Wersja demonstracyjna
+  </footer>
 
   <script>
     (() => {
