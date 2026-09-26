@@ -10,6 +10,30 @@
       "config": "Konfiguracja",
       "backToCalendar": "Powrót do kalendarza"
     },
+    "pageInfo": {
+      "title": "Informacje o stronie",
+      "summary": "Ta aplikacja służy do ewidencji czasu pracy w ramach projektów i działań.",
+      "ownerName": "g-koziol",
+      "ownerUrl": "https://github.com/g-koziol",
+      "footerText": "© 2026 Ewidencja działań projektowych · Wersja demonstracyjna",
+      "cards": [
+        {
+          "id": "about-card-plan",
+          "title": "Planowanie",
+          "body": "Przeglądaj miesięczne zestawienia i poruszaj się po dniach z poziomym panelem nawigacyjnym."
+        },
+        {
+          "id": "about-card-time",
+          "title": "Kontrola czasu",
+          "body": "Widzisz wypracowane godziny, pozostały limit i liczbę dodanych działań w każdej chwili."
+        },
+        {
+          "id": "about-card-safe",
+          "title": "Bezpieczne dane",
+          "body": "Wszystkie dane są zapisywane lokalnie w przeglądarce i mogą być łatwo wyeksportowane jako backup."
+        }
+      ]
+    },
     "global": {
       "timeResolution": "minute",
       "workFrom": "09:00",

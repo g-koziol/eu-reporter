@@ -94,6 +94,12 @@
     .limit-over #totalHours { color: var(--danger); }
     .hidden { display: none !important; }
     .footer-note { font-size: .84rem; color: var(--muted); padding: 4px 0; }
+    .page-info-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--line);
+      background: white; color: var(--text); font-size: 1.1rem; font-weight: 700; line-height: 1;
+      padding: 0;
+    }
     .page-info {
       margin: 18px auto 0;
       padding: 18px 20px;
@@ -200,29 +206,32 @@
   </header>
 
   <section class="wrap page-info" aria-label="Informacje o stronie">
-    <h2>Informacje o stronie</h2>
-    <p>Ta aplikacja służy do ewidencji czasu pracy w ramach projektów i działań. Umożliwia szybkie zapisanie godzin, kontrolę limitu oraz eksport danych do pliku JSON.</p>
-    <div class="page-info-grid">
-      <div class="page-info-item">
-        <strong>Planowanie</strong>
-        <span>Przeglądaj miesięczne zestawienia i poruszaj się po dniach z poziomym panelem nawigacyjnym.</span>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div>
+        <h2 id="pageInfoTitle">Informacje o stronie</h2>
+        <p id="pageInfoSummary">Ta aplikacja służy do ewidencji czasu pracy w ramach projektów i działań. Umożliwia szybkie zapisanie godzin, kontrolę limitu oraz eksport danych do pliku JSON.</p>
       </div>
-      <div class="page-info-item">
-        <strong>Kontrola czasu</strong>
-        <span>Widzisz wypracowane godziny, pozostały limit i liczbę dodanych działań w każdej chwili.</span>
-      </div>
-      <div class="page-info-item">
-        <strong>Bezpieczne dane</strong>
-        <span>Wszystkie dane są zapisywane lokalnie w przeglądarce i mogą być łatwo wyeksportowane jako backup.</span>
-      </div>
+      <button id="pageInfoBtn" class="page-info-btn" type="button" aria-label="Pokaż informacje o stronie">i</button>
     </div>
+    <div id="pageInfoGrid" class="page-info-grid"></div>
   </section>
 
   <main class="wrap weeks" id="calendar"></main>
 
-  <footer class="page-footer">
-    © 2026 Ewidencja działań projektowych · Wersja demonstracyjna
-  </footer>
+  <footer class="page-footer" id="pageFooter"></footer>
+
+  <div id="pageInfoModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="pageInfoModalTitle">
+      <div class="modal-head">
+        <div>
+          <div class="small">O aplikacji</div>
+          <h3 id="pageInfoModalTitle" style="margin:4px 0 0;">Informacje o stronie</h3>
+        </div>
+        <button type="button" id="closePageInfoModalBtn" aria-label="Zamknij">✕</button>
+      </div>
+      <div id="pageInfoModalContent"></div>
+    </div>
+  </div>
 
   <script>
     (() => {
@@ -370,7 +379,45 @@
           actionDuration: "Czas działania",
           actionDelete: "Usuń",
           emptyMonth: "Poza wybranym miesiącem",
-          defaultActionType: "Typ zapisu"
+          defaultActionType: "Typ zapisu",
+          pageInfoTitle: "Informacje o stronie",
+          pageInfoSummary: "Ta aplikacja służy do ewidencji czasu pracy w ramach projektów i działań. Umożliwia szybkie zapisanie godzin, kontrolę limitu oraz eksport danych do pliku JSON.",
+          pageInfoDefaultOwner: "g-koziol",
+          pageInfoOwnerUrl: "https://github.com/g-koziol",
+          pageInfoFooterText: "© 2026 Ewidencja działań projektowych · Wersja demonstracyjna",
+          footerAuthorLabel: "Autor",
+          aboutCardsLabel: "Karty o stronie"
+        };
+      }
+
+      function createDefaultAboutCards() {
+        return [
+          {
+            id: uid("aboutcard"),
+            title: "Planowanie",
+            body: "Przeglądaj miesięczne zestawienia i poruszaj się po dniach z poziomym panelem nawigacyjnym."
+          },
+          {
+            id: uid("aboutcard"),
+            title: "Kontrola czasu",
+            body: "Widzisz wypracowane godziny, pozostały limit i liczbę dodanych działań w każdej chwili."
+          },
+          {
+            id: uid("aboutcard"),
+            title: "Bezpieczne dane",
+            body: "Wszystkie dane są zapisywane lokalnie w przeglądarce i mogą być łatwo wyeksportowane jako backup."
+          }
+        ];
+      }
+
+      function defaultPageInfo() {
+        return {
+          title: "Informacje o stronie",
+          summary: "Ta aplikacja służy do ewidencji czasu pracy w ramach projektów i działań. Umożliwia szybkie zapisanie godzin, kontrolę limitu oraz eksport danych do pliku JSON.",
+          ownerName: "g-koziol",
+          ownerUrl: "https://github.com/g-koziol",
+          footerText: "© 2026 Ewidencja działań projektowych · Wersja demonstracyjna",
+          cards: createDefaultAboutCards()
         };
       }
 
@@ -380,6 +427,7 @@
         return {
           version: DEFAULT_VERSION,
           labels: createDefaultLabels(),
+          pageInfo: defaultPageInfo(),
           global: {
             timeResolution: DEFAULT_RESOLUTION,
             workFrom: DEFAULT_WORK_FROM,
@@ -430,13 +478,32 @@
       function normalizeConfig(raw) {
         const source = raw && typeof raw === "object" ? raw : createDefaultConfig();
         const defaultLabels = createDefaultLabels();
+        const defaultInfo = defaultPageInfo();
         const parseTargetHours = (value) => {
           const number = Number(value);
           return Number.isFinite(number) && number >= 0 ? Math.max(0, number) : DEFAULT_TARGET_HOURS;
         };
+        const pageInfo = source.pageInfo && typeof source.pageInfo === "object" ? source.pageInfo : defaultInfo;
+        const normalizeAboutCard = (card) => {
+          if (!card || typeof card !== "object") return null;
+          return {
+            id: card.id || uid("aboutcard"),
+            title: card.title || "Nowa karta",
+            body: card.body || ""
+          };
+        };
+        const pageCards = Array.isArray(pageInfo.cards) ? pageInfo.cards.map(normalizeAboutCard).filter(Boolean) : createDefaultAboutCards();
         const config = {
           version: DEFAULT_VERSION,
           labels: Object.assign({}, defaultLabels, source.labels || {}),
+          pageInfo: {
+            title: pageInfo.title || defaultInfo.title,
+            summary: pageInfo.summary || defaultInfo.summary,
+            ownerName: pageInfo.ownerName || defaultInfo.ownerName,
+            ownerUrl: pageInfo.ownerUrl || defaultInfo.ownerUrl,
+            footerText: pageInfo.footerText || defaultInfo.footerText,
+            cards: pageCards.length ? pageCards : createDefaultAboutCards()
+          },
           global: {
             timeResolution: source.global && source.global.timeResolution ? source.global.timeResolution : DEFAULT_RESOLUTION,
             workFrom: source.global && source.global.workFrom ? source.global.workFrom : DEFAULT_WORK_FROM,
@@ -480,6 +547,7 @@
         if (!config.projects.length) config.projects.push(createProject());
         if (!config.defaultProfileId) config.defaultProfileId = config.profiles[0].id;
         if (!config.defaultProjectId) config.defaultProjectId = config.projects[0].id;
+        if (!config.pageInfo) config.pageInfo = defaultInfo;
         return config;
       }
 
@@ -682,6 +750,68 @@
         return Object.assign({}, defaultLabels, (db.config && db.config.labels) || {});
       }
 
+      function getPageInfo() {
+        const defaultInfo = defaultPageInfo();
+        const configured = (db.config && db.config.pageInfo) || {};
+        const cards = Array.isArray(configured.cards) && configured.cards.length ? configured.cards : defaultInfo.cards;
+        return {
+          title: configured.title || defaultInfo.title,
+          summary: configured.summary || defaultInfo.summary,
+          ownerName: configured.ownerName || defaultInfo.ownerName,
+          ownerUrl: configured.ownerUrl || defaultInfo.ownerUrl,
+          footerText: configured.footerText || defaultInfo.footerText,
+          cards: cards.map((card) => ({
+            id: card.id || uid("aboutcard"),
+            title: card.title || "Nowa karta",
+            body: card.body || ""
+          }))
+        };
+      }
+
+      function renderPageInfo() {
+        const info = getPageInfo();
+        const title = document.querySelector("#pageInfoTitle");
+        const grid = document.querySelector("#pageInfoGrid");
+        const summary = document.querySelector("#pageInfoSummary");
+        if (title) title.textContent = info.title;
+        if (summary) summary.textContent = info.summary;
+        if (grid) {
+          grid.innerHTML = (info.cards || []).map((card) => `
+            <div class="page-info-item">
+              <strong>${esc(card.title || "")}</strong>
+              <span>${esc(card.body || "")}</span>
+            </div>
+          `).join("");
+        }
+
+        const footer = document.querySelector("#pageFooter");
+        if (footer) {
+          const owner = info.ownerUrl ? `<a href="${esc(info.ownerUrl)}" target="_blank" rel="noreferrer">${esc(info.ownerName || "Autor")}</a>` : esc(info.ownerName || "Autor");
+          footer.innerHTML = `${esc(info.footerText || "")}${info.ownerName ? ` · Autor: ${owner}` : ""}`;
+        }
+
+        const modal = document.querySelector("#pageInfoModal");
+        const modalContent = document.querySelector("#pageInfoModalContent");
+        const modalTitle = document.querySelector("#pageInfoModalTitle");
+        if (modalTitle) modalTitle.textContent = info.title;
+        if (modal && modalContent) {
+          modalContent.innerHTML = `
+            <div style="display:grid;gap:12px;">
+              <p style="margin:0; color:var(--muted); line-height:1.6;">${esc(info.summary || "")}</p>
+              <div class="page-info-grid" style="margin-top:0; grid-template-columns: repeat(2, minmax(0, 1fr));">
+                ${(info.cards || []).map((card) => `
+                  <div class="page-info-item">
+                    <strong>${esc(card.title || "")}</strong>
+                    <span>${esc(card.body || "")}</span>
+                  </div>
+                `).join("")}
+              </div>
+              <div class="small">Autor: ${info.ownerUrl ? `<a href="${esc(info.ownerUrl)}" target="_blank" rel="noreferrer">${esc(info.ownerName || "Autor")}</a>` : esc(info.ownerName || "Autor")}</div>
+            </div>
+          `;
+        }
+      }
+
       function renderBatchModal() {
         const modal = $("#batchModal");
         if (!modal) return;
@@ -818,6 +948,7 @@
       }
 
       function render() {
+        renderPageInfo();
         updateDayNavOffset();
         if (state.configOpen) {
           renderConfigPage();
@@ -1316,12 +1447,29 @@
         `;
       }
 
+      function renderAboutCardEditor(card) {
+        return `
+          <div class="action" data-about-card-id="${card.id}" style="padding:10px;">
+            <div class="row2">
+              <label>Tytuł karty
+                <input type="text" data-about-card-title value="${esc(card.title || "")}">
+              </label>
+              <button type="button" class="danger" data-remove-about-card>Usuń</button>
+            </div>
+            <label>Treść karty
+              <textarea data-about-card-body>${esc(card.body || "")}</textarea>
+            </label>
+          </div>
+        `;
+      }
+
       function renderConfigPage() {
         const config = db.config || createDefaultConfig();
         const profiles = config.profiles || [];
         const projects = config.projects || [];
         const globalCfg = config.global || { timeResolution: DEFAULT_RESOLUTION, workFrom: DEFAULT_WORK_FROM, workTo: DEFAULT_WORK_TO, workTypes: clone(defaultWorkTypes()), dayFields: clone(defaultDayFields()) };
         const labels = getLabels();
+        const pageInfo = getPageInfo();
 
         $("#calendar").className = "wrap";
         $("#calendar").innerHTML = `
@@ -1389,6 +1537,38 @@
                     <input type="text" data-label-key="${esc(key)}" value="${esc(value)}">
                   </label>
                 `).join("")}
+              </div>
+            </section>
+
+            <section class="day" style="padding:16px;">
+              <div class="day-head" style="padding:0;border:none;background:none;margin-bottom:10px;">
+                <div class="day-title">${labels.pageInfoTitle || "Informacje o stronie"}</div>
+              </div>
+              <div style="display:grid;gap:10px;">
+                <label>Tytuł sekcji
+                  <input id="pageInfoTitleInput" type="text" value="${esc(pageInfo.title || "Informacje o stronie")}">
+                </label>
+                <label>Opis strony
+                  <textarea id="pageInfoSummaryInput">${esc(pageInfo.summary || "")}</textarea>
+                </label>
+                <div class="row2">
+                  <label>Właściciel / autor
+                    <input id="pageInfoOwnerNameInput" type="text" value="${esc(pageInfo.ownerName || "")}">
+                  </label>
+                  <label>Link do profilu
+                    <input id="pageInfoOwnerUrlInput" type="url" value="${esc(pageInfo.ownerUrl || "")}">
+                  </label>
+                </div>
+                <label>Stopka strony
+                  <input id="pageInfoFooterTextInput" type="text" value="${esc(pageInfo.footerText || "")}">
+                </label>
+                <div>
+                  <div class="small" style="margin-bottom:8px;">${labels.aboutCardsLabel || "Karty o stronie"}</div>
+                  <div style="display:grid;gap:8px;">
+                    ${(pageInfo.cards || []).map((card) => renderAboutCardEditor(card)).join("")}
+                  </div>
+                  <button type="button" id="addAboutCardBtn" style="margin-top:10px;">+ Dodaj kartę</button>
+                </div>
               </div>
             </section>
 
@@ -1470,6 +1650,83 @@
           db.config.global.collapseEmptyDaysByDefault = Boolean(event.target.checked);
           saveDb();
           render();
+        });
+
+        $("#pageInfoTitleInput").addEventListener("input", (event) => {
+          db.config.pageInfo = db.config.pageInfo || defaultPageInfo();
+          db.config.pageInfo.title = event.target.value || defaultPageInfo().title;
+          saveDb();
+          renderPageInfo();
+        });
+
+        $("#pageInfoSummaryInput").addEventListener("input", (event) => {
+          db.config.pageInfo = db.config.pageInfo || defaultPageInfo();
+          db.config.pageInfo.summary = event.target.value || defaultPageInfo().summary;
+          saveDb();
+          renderPageInfo();
+        });
+
+        $("#pageInfoOwnerNameInput").addEventListener("input", (event) => {
+          db.config.pageInfo = db.config.pageInfo || defaultPageInfo();
+          db.config.pageInfo.ownerName = event.target.value || defaultPageInfo().ownerName;
+          saveDb();
+          renderPageInfo();
+        });
+
+        $("#pageInfoOwnerUrlInput").addEventListener("input", (event) => {
+          db.config.pageInfo = db.config.pageInfo || defaultPageInfo();
+          db.config.pageInfo.ownerUrl = event.target.value || defaultPageInfo().ownerUrl;
+          saveDb();
+          renderPageInfo();
+        });
+
+        $("#pageInfoFooterTextInput").addEventListener("input", (event) => {
+          db.config.pageInfo = db.config.pageInfo || defaultPageInfo();
+          db.config.pageInfo.footerText = event.target.value || defaultPageInfo().footerText;
+          saveDb();
+          renderPageInfo();
+        });
+
+        $("#addAboutCardBtn").addEventListener("click", () => {
+          db.config.pageInfo = db.config.pageInfo || defaultPageInfo();
+          db.config.pageInfo.cards = db.config.pageInfo.cards || createDefaultAboutCards();
+          db.config.pageInfo.cards.push({ id: uid("aboutcard"), title: "Nowa karta", body: "Opis karty" });
+          saveDb();
+          render();
+        });
+
+        document.querySelectorAll("[data-about-card-id]").forEach((card) => {
+          const cardId = card.dataset.aboutCardId;
+          const infoCard = (db.config.pageInfo.cards || []).find((item) => item.id === cardId);
+          if (!infoCard) return;
+
+          const titleInput = card.querySelector("[data-about-card-title]");
+          if (titleInput) {
+            titleInput.addEventListener("input", () => {
+              infoCard.title = titleInput.value || "Nowa karta";
+              saveDb();
+              renderPageInfo();
+            });
+          }
+
+          const bodyInput = card.querySelector("[data-about-card-body]");
+          if (bodyInput) {
+            bodyInput.addEventListener("input", () => {
+              infoCard.body = bodyInput.value || "";
+              saveDb();
+              renderPageInfo();
+            });
+          }
+
+          const removeBtn = card.querySelector("[data-remove-about-card]");
+          if (removeBtn) {
+            removeBtn.addEventListener("click", () => {
+              db.config.pageInfo.cards = (db.config.pageInfo.cards || []).filter((item) => item.id !== cardId);
+              if (!db.config.pageInfo.cards.length) db.config.pageInfo.cards = createDefaultAboutCards();
+              saveDb();
+              render();
+            });
+          }
         });
 
         $("#addProfileBtn").addEventListener("click", () => {
@@ -1927,6 +2184,29 @@
         activeDay: null
       };
 
+      function bindPageInfoModal() {
+        const modal = document.querySelector("#pageInfoModal");
+        const button = document.querySelector("#pageInfoBtn");
+        const closeButton = document.querySelector("#closePageInfoModalBtn");
+        if (!modal || !button || !closeButton) return;
+        const open = () => {
+          modal.classList.remove("hidden");
+          modal.setAttribute("aria-hidden", "false");
+        };
+        const close = () => {
+          modal.classList.add("hidden");
+          modal.setAttribute("aria-hidden", "true");
+        };
+        button.addEventListener("click", open);
+        closeButton.addEventListener("click", close);
+        modal.addEventListener("click", (event) => {
+          if (event.target === modal) close();
+        });
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape" && !modal.classList.contains("hidden")) close();
+        });
+      }
+
       let currentMonth = ym(new Date());
       let db = loadDb();
 
@@ -2041,6 +2321,7 @@
       window.addEventListener("resize", updateDayNavOffset);
 
       $("#monthPicker").value = currentMonth;
+      bindPageInfoModal();
       initializeSelectors();
       render();
     })();
