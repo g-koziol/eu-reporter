@@ -248,35 +248,46 @@
   </div>
 
   <script>
-    (() => {
-      const DEFAULT_TARGET_HOURS = 100;
-      const STORAGE_KEY = "ewidencjaProjektowa_v1";
-      const DEFAULT_RESOLUTION = "minute";
-      const DEFAULT_WORK_FROM = "09:00";
-      const DEFAULT_WORK_TO = "17:00";
-      const DEFAULT_VERSION = 1;
+    (async () => {
+      const app = await import('./src/app.js');
+      const {
+        DEFAULT_TARGET_HOURS,
+        DEFAULT_RESOLUTION,
+        DEFAULT_WORK_FROM,
+        DEFAULT_WORK_TO,
+        DEFAULT_VERSION,
+        STORAGE_KEY,
+        clone,
+        uid,
+        esc,
+        defaultWorkTypes,
+        defaultDayFields,
+        defaultCollaborationRecordAttributes,
+        defaultCollaborationRecordConfig,
+        createProfile,
+        createProject,
+        createDefaultLabels,
+        createDefaultAboutCards,
+        defaultPageInfo,
+        createDefaultConfig,
+        pad,
+        iso,
+        ym,
+        normalizeWorkType,
+        normalizeDayField,
+        normalizeConfig,
+        loadDb,
+        saveDb,
+        normalizeResolution,
+        stepForResolution,
+        roundTime,
+        monthGrid,
+        fmtMin,
+        actionMinutes,
+        timeToMin
+      } = app;
 
       const $ = (selector) => document.querySelector(selector);
-      const pad = (n) => String(n).padStart(2, "0");
-      const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-      const ym = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
-      const clone = (value) => JSON.parse(JSON.stringify(value));
-
-      function uid(prefix) {
-        return `${prefix}-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
-      }
-
-      function esc(value = "") {
-        return String(value).replace(/[&<>"']/g, (char) => ({
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#39;'
-        }[char]));
-      }
-
-      function defaultWorkTypes() {
         return [
           {
             id: "ops-cooperation",
