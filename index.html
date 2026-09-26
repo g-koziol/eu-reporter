@@ -23,6 +23,9 @@
       background: var(--bg);
       color: var(--text);
     }
+    :root {
+      --day-nav-top: 108px;
+    }
     header {
       position: sticky;
       top: 0;
@@ -70,7 +73,7 @@
     .day-body { padding: 10px; display: grid; gap: 8px; }
     .day.is-collapsed .day-body { display: none; }
     .day-toggle { border: 1px solid var(--line); background: white; border-radius: 999px; padding: 4px 8px; cursor: pointer; font-size: .8rem; }
-    .day-nav { position: sticky; top: 108px; z-index: 8; margin-bottom: 12px; padding: 10px 0; background: rgba(246,247,251,.96); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+    .day-nav { position: sticky; top: var(--day-nav-top); z-index: 8; margin-bottom: 12px; padding: 10px 0; background: rgba(246,247,251,.96); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
     .day-nav-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(72px, 1fr); gap: 8px; overflow-x: auto; scrollbar-width: thin; }
     .day-pill { appearance: none; border: 1px solid var(--line); background: white; color: var(--text); border-radius: 10px; padding: 8px 10px; text-align: center; cursor: pointer; display: grid; gap: 4px; }
     .day-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
@@ -107,7 +110,9 @@
     .weekday-grid input { width: auto; margin: 0; }
     @media (max-width:1100px){ .week { grid-template-columns: repeat(2,minmax(0,1fr)); } }
     @media (max-width:700px){
+      :root { --day-nav-top: 0px; }
       header { position: static; }
+      .day-nav { top: 0; }
       .week { grid-template-columns: 1fr; }
       .stats { grid-template-columns: 1fr; }
       .action-top, .row2 { grid-template-columns: 1fr; }
@@ -708,7 +713,16 @@
         });
       }
 
+      function updateDayNavOffset() {
+        const header = document.querySelector("header");
+        if (!header) return;
+        const isStatic = window.innerWidth <= 700;
+        const offset = isStatic ? 0 : header.offsetHeight;
+        document.documentElement.style.setProperty("--day-nav-top", `${offset}px`);
+      }
+
       function render() {
+        updateDayNavOffset();
         if (state.configOpen) {
           renderConfigPage();
           return;
@@ -1877,6 +1891,8 @@
           render();
         }
       });
+
+      window.addEventListener("resize", updateDayNavOffset);
 
       $("#monthPicker").value = currentMonth;
       initializeSelectors();
