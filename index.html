@@ -780,14 +780,23 @@
         });
         const totalMinutes = (bucket.days[date].actions || []).reduce((sum, action) => sum + actionMinutes(action), 0);
         const isZeroWorkDay = totalMinutes === 0;
-        const shouldCollapse = Boolean(cfg.collapseEmptyDaysByDefault && isZeroWorkDay);
+        const isMeaningfullyEmpty = !((bucket.days[date].actions || []).length) && !bucket.days[date].area && !bucket.days[date].nextPlan && !bucket.days[date].risks && !bucket.days[date].notes && !hasMeaningfulExtraFields(bucket.days[date]) && !bucket.days[date].workFrom && !bucket.days[date].workTo;
+        const shouldCollapse = Boolean(cfg.collapseEmptyDaysByDefault && isZeroWorkDay && isMeaningfullyEmpty);
         if (isZeroWorkDay && bucket.days[date].collapsed === undefined) {
           bucket.days[date].collapsed = shouldCollapse;
         }
-        if (isZeroWorkDay && bucket.days[date].collapsed !== shouldCollapse && cfg.collapseEmptyDaysByDefault) {
+        if (isZeroWorkDay && bucket.days[date].collapsed !== shouldCollapse && cfg.collapseEmptyDaysByDefault && isMeaningfullyEmpty) {
           bucket.days[date].collapsed = true;
         }
         return bucket.days[date];
+      }
+
+      function hasMeaningfulExtraFields(day) {
+        return Object.values(day && day.extra ? day.extra : {}).some((value) => {
+          if (value === null || value === undefined) return false;
+          if (typeof value === "string") return value.trim() !== "";
+          return value !== "" && value !== false;
+        });
       }
 
       function getFieldValue(day, fieldId) {
@@ -1050,7 +1059,7 @@
             const total = (day.actions || []).reduce((sum, action) => sum + actionMinutes(action), 0);
             const weekName = names[(dateObj.getDay() + 6) % 7];
             const isToday = key === iso(new Date());
-            const isEmpty = !(day.actions || []).length && !day.area && !day.nextPlan && !day.risks && !day.notes && !Object.keys(day.extra || {}).length && !day.workFrom && !day.workTo;
+            const isEmpty = !(day.actions || []).length && !day.area && !day.nextPlan && !day.risks && !day.notes && !hasMeaningfulExtraFields(day) && !day.workFrom && !day.workTo;
             return `
               <button type="button" class="day-pill ${isToday ? "today" : ""} ${state.activeDay === key ? "active" : ""}" data-day-nav="${key}" title="${key}">
                 <span class="day-pill-week">${weekName}</span>
@@ -1085,7 +1094,7 @@
             const dateKey = iso(dateObj);
             const day = inMonth ? ensureDay(dateKey) : null;
             const total = inMonth ? (day.actions || []).reduce((sum, action) => sum + actionMinutes(action), 0) : 0;
-            const isEmpty = inMonth && !(day.actions || []).length && !day.area && !day.nextPlan && !day.risks && !day.notes && !Object.keys(day.extra || {}).length;
+            const isEmpty = inMonth && !(day.actions || []).length && !day.area && !day.nextPlan && !day.risks && !day.notes && !hasMeaningfulExtraFields(day);
             const isCollapsed = !!(inMonth && day && day.collapsed !== undefined ? day.collapsed : (cfg.collapseEmptyDaysByDefault && isEmpty));
             const article = document.createElement("article");
             article.className = "day" + (inMonth ? "" : " off") + (inMonth && state.activeDay === dateKey ? " is-focused" : "") + (isCollapsed ? " is-collapsed" : "");
