@@ -12,6 +12,8 @@
     },
     "global": {
       "timeResolution": "minute",
+      "workFrom": "09:00",
+      "workTo": "17:00",
       "workTypes": [
         {
           "id": "ops-cooperation",
@@ -34,6 +36,8 @@
         "name": "Domyślny profil",
         "config": {
           "timeResolution": "minute",
+          "workFrom": "09:00",
+          "workTo": "17:00",
           "workTypes": [
             {
               "id": "ops-cooperation",
@@ -54,6 +58,8 @@
         "name": "Domyślny projekt",
         "config": {
           "timeResolution": "minute",
+          "workFrom": "09:00",
+          "workTo": "17:00",
           "workTypes": [
             {
               "id": "ops-cooperation",
