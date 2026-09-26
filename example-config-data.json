@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "config": {
+    "version": 1,
+    "labels": {
+      "title": "Ewidencja działań projektowych",
+      "month": "Miesiąc",
+      "profile": "Profil",
+      "project": "Projekt",
+      "config": "Konfiguracja",
+      "backToCalendar": "Powrót do kalendarza"
+    },
+    "global": {
+      "timeResolution": "minute",
+      "workTypes": [
+        {
+          "id": "ops-cooperation",
+          "name": "Współpraca z OPS",
+          "defaultValues": {
+            "description": "Współpraca z OPS",
+            "notes": "",
+            "attrs": {}
+          },
+          "attributes": []
+        }
+      ],
+      "dayFields": [
+        { "id": "area", "label": "Obszar działania", "type": "textarea", "defaultValue": "" }
+      ]
+    },
+    "profiles": [
+      {
+        "id": "profile-default",
+        "name": "Domyślny profil",
+        "config": {
+          "timeResolution": "minute",
+          "workTypes": [
+            {
+              "id": "ops-cooperation",
+              "name": "Współpraca z OPS",
+              "defaultValues": { "description": "", "notes": "", "attrs": {} },
+              "attributes": []
+            }
+          ],
+          "dayFields": [
+            { "id": "area", "label": "Obszar działania", "type": "textarea", "defaultValue": "" }
+          ]
+        }
+      }
+    ],
+    "projects": [
+      {
+        "id": "project-default",
+        "name": "Domyślny projekt",
+        "config": {
+          "timeResolution": "minute",
+          "workTypes": [
+            {
+              "id": "ops-cooperation",
+              "name": "Współpraca z OPS",
+              "defaultValues": { "description": "", "notes": "", "attrs": {} },
+              "attributes": []
+            }
+          ],
+          "dayFields": [
+            { "id": "area", "label": "Obszar działania", "type": "textarea", "defaultValue": "" }
+          ]
+        }
+      }
+    ],
+    "defaultProfileId": "profile-default",
+    "defaultProjectId": "project-default"
+  },
+  "months": {
+    "2026-09": {
+      "profile-default": {
+        "project-default": {
+          "days": {
+            "2026-09-01": {
+              "workFrom": "09:00",
+              "workTo": "10:30",
+              "area": "Analiza zadania",
+              "nextPlan": "Kontynuacja prac",
+              "risks": "",
+              "notes": "",
+              "extra": {},
+              "actions": [
+                {
+                  "workType": "ops-cooperation",
+                  "from": "09:00",
+                  "to": "10:30",
+                  "description": "Spotkanie i analiza",
+                  "notes": "",
+                  "attrs": {}
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -94,19 +94,19 @@
   <header>
     <div class="wrap">
       <div class="toolbar">
-        <strong>Ewidencja działań projektowych</strong>
-        <label style="width:auto">Miesiąc
+        <strong id="appTitle">Ewidencja działań projektowych</strong>
+        <label style="width:auto"><span id="monthLabelText">Miesiąc</span>
           <input id="monthPicker" type="month" style="width:auto">
         </label>
-        <label style="width:auto">Profil
+        <label style="width:auto"><span id="profileLabelText">Profil</span>
           <select id="profileSelect" style="width:auto"></select>
         </label>
-        <label style="width:auto">Projekt
+        <label style="width:auto"><span id="projectLabelText">Projekt</span>
           <select id="projectSelect" style="width:auto"></select>
         </label>
         <button id="configBtn" class="primary" type="button">Konfiguracja</button>
         <button id="exportBtn" type="button">Eksport JSON</button>
-        <label class="btn">Import JSON
+        <label class="btn"><span id="importLabelText">Import JSON</span>
           <input id="importInput" type="file" accept="application/json,.json" class="hidden">
         </label>
         <button id="clearBtn" class="danger" type="button">Wyczyść bieżący miesiąc</button>
@@ -220,11 +220,57 @@
         };
       }
 
+      function createDefaultLabels() {
+        return {
+          title: "Ewidencja działań projektowych",
+          month: "Miesiąc",
+          profile: "Profil",
+          project: "Projekt",
+          config: "Konfiguracja",
+          backToCalendar: "Powrót do kalendarza",
+          exportJson: "Eksport JSON",
+          importJson: "Import JSON",
+          clearMonth: "Wyczyść bieżący miesiąc",
+          globalSettings: "Ustawienia globalne",
+          profileSettings: "Profile",
+          projectSettings: "Projekty",
+          defaultProfile: "Domyślny profil",
+          defaultProject: "Domyślny projekt",
+          timeResolution: "Rozdzielczość czasu",
+          addProfile: "+ Dodaj profil",
+          addProject: "+ Dodaj projekt",
+          addWorkType: "+ Dodaj typ wpisu",
+          addDayField: "+ Dodaj pole dnia",
+          addAttribute: "+ Dodaj atrybut",
+          labelSectionTitle: "Teksty i etykiety",
+          labelHints: "Ustaw etykiety widocznych sekcji, nagłówków i przycisków.",
+          workTypeLabel: "Typ wpisu pracy",
+          workTypeDefaultDescription: "Domyślny opis",
+          workTypeDefaultNotes: "Domyślne uwagi",
+          workTypeAttributes: "Atrybuty typu",
+          dayFieldLabel: "Etykieta pola",
+          startOfDay: "Zakres dnia od",
+          endOfDay: "Zakres dnia do",
+          dayArea: "Obszar działania",
+          dayPlan: "Plan dalszych działań",
+          dayRisks: "Trudności / ryzyka",
+          dayNotes: "Uwagi do dnia",
+          actionSummary: "Działania w ciągu dnia",
+          actionDescription: "Opis działania",
+          actionNotes: "Uwagi do działania",
+          actionDuration: "Czas działania",
+          actionDelete: "Usuń",
+          emptyMonth: "Poza wybranym miesiącem",
+          defaultActionType: "Typ zapisu"
+        };
+      }
+
       function createDefaultConfig() {
         const profile = createProfile();
         const project = createProject();
         return {
           version: DEFAULT_VERSION,
+          labels: createDefaultLabels(),
           global: {
             timeResolution: DEFAULT_RESOLUTION,
             workTypes: clone(defaultWorkTypes()),
@@ -270,8 +316,10 @@
 
       function normalizeConfig(raw) {
         const source = raw && typeof raw === "object" ? raw : createDefaultConfig();
+        const defaultLabels = createDefaultLabels();
         const config = {
           version: DEFAULT_VERSION,
+          labels: Object.assign({}, defaultLabels, source.labels || {}),
           global: {
             timeResolution: source.global && source.global.timeResolution ? source.global.timeResolution : DEFAULT_RESOLUTION,
             workTypes: Array.isArray(source.global && source.global.workTypes) ? source.global.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
@@ -311,6 +359,7 @@
           const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
           if (!raw) return { version: DEFAULT_VERSION, config: createDefaultConfig(), months: {} };
           const migrated = { version: DEFAULT_VERSION, config: normalizeConfig(raw.config || raw), months: raw.months || {} };
+          if (!migrated.config.labels) migrated.config.labels = createDefaultLabels();
           migrated.config.version = DEFAULT_VERSION;
           if (!migrated.config.global) migrated.config.global = createDefaultConfig().global;
           if (!migrated.config.profiles || !migrated.config.profiles.length) migrated.config.profiles = [createProfile()];
@@ -475,12 +524,18 @@
         }
       }
 
+      function getLabels() {
+        const defaultLabels = createDefaultLabels();
+        return Object.assign({}, defaultLabels, (db.config && db.config.labels) || {});
+      }
+
       function render() {
         if (state.configOpen) {
           renderConfigPage();
           return;
         }
 
+        const labels = getLabels();
         const calendar = $("#calendar");
         calendar.className = "wrap weeks";
         calendar.innerHTML = "";
@@ -488,6 +543,14 @@
         const days = monthGrid(currentMonth);
         const [year, month] = currentMonth.split("-").map(Number);
         const names = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Nd"];
+        $("#appTitle").textContent = labels.title;
+        $("#monthLabelText").textContent = labels.month;
+        $("#profileLabelText").textContent = labels.profile;
+        $("#projectLabelText").textContent = labels.project;
+        $("#configBtn").textContent = labels.config;
+        $("#exportBtn").textContent = labels.exportJson;
+        $("#importLabelText").textContent = labels.importJson;
+        $("#clearBtn").textContent = labels.clearMonth;
         const cfg = getEffectiveConfig();
 
         for (let i = 0; i < days.length; i += 7) {
@@ -845,28 +908,29 @@
         const profiles = config.profiles || [];
         const projects = config.projects || [];
         const globalCfg = config.global || { timeResolution: DEFAULT_RESOLUTION, workTypes: clone(defaultWorkTypes()), dayFields: clone(defaultDayFields()) };
+        const labels = getLabels();
 
         $("#calendar").className = "wrap";
         $("#calendar").innerHTML = `
           <div style="padding:20px 0 40px;display:grid;gap:18px;">
             <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
-              <h2 style="margin:0;">Konfiguracja</h2>
-              <button id="backToCalendarBtn" class="primary" type="button">Powrót do kalendarza</button>
+              <h2 style="margin:0;">${labels.config}</h2>
+              <button id="backToCalendarBtn" class="primary" type="button">${labels.backToCalendar}</button>
             </div>
 
             <section class="day" style="padding:16px;">
               <div class="day-head" style="padding:0;border:none;background:none;margin-bottom:10px;">
-                <div class="day-title">Ustawienia globalne</div>
+                <div class="day-title">${labels.globalSettings}</div>
               </div>
               <div class="row2">
-                <label>Domyślny profil
+                <label>${labels.defaultProfile}
                   <select id="defaultProfileSelect">
                     ${(profiles || []).map((profile) => `
                       <option value="${profile.id}" ${config.defaultProfileId === profile.id ? "selected" : ""}>${esc(profile.name)}</option>
                     `).join("")}
                   </select>
                 </label>
-                <label>Domyślny projekt
+                <label>${labels.defaultProject}
                   <select id="defaultProjectSelect">
                     ${(projects || []).map((project) => `
                       <option value="${project.id}" ${config.defaultProjectId === project.id ? "selected" : ""}>${esc(project.name)}</option>
@@ -874,7 +938,7 @@
                   </select>
                 </label>
               </div>
-              <label>Rozdzielczość czasu globalna
+              <label>${labels.timeResolution}
                 <select id="globalResolutionSelect">
                   <option value="minute" ${(globalCfg.timeResolution || DEFAULT_RESOLUTION) === "minute" ? "selected" : ""}>Minuty</option>
                   <option value="30m" ${(globalCfg.timeResolution || DEFAULT_RESOLUTION) === "30m" ? "selected" : ""}>30 minut</option>
@@ -886,22 +950,36 @@
 
             <section class="day" style="padding:16px;">
               <div class="day-head" style="padding:0;border:none;background:none;margin-bottom:10px;">
-                <div class="day-title">Profile</div>
+                <div class="day-title">${labels.labelSectionTitle}</div>
               </div>
-              <div style="display:grid;gap:12px;">
-                ${(profiles || []).map((profile) => renderProfileCard(profile)).join("")}
+              <div class="small" style="margin-bottom:10px;">${labels.labelHints}</div>
+              <div style="display:grid;gap:10px;">
+                ${Object.entries((config.labels || createDefaultLabels())).map(([key, value]) => `
+                  <label>${esc(key)}
+                    <input type="text" data-label-key="${esc(key)}" value="${esc(value)}">
+                  </label>
+                `).join("")}
               </div>
-              <button type="button" id="addProfileBtn" style="margin-top:10px;">+ Dodaj profil</button>
             </section>
 
             <section class="day" style="padding:16px;">
               <div class="day-head" style="padding:0;border:none;background:none;margin-bottom:10px;">
-                <div class="day-title">Projekty</div>
+                <div class="day-title">${labels.profileSettings}</div>
+              </div>
+              <div style="display:grid;gap:12px;">
+                ${(profiles || []).map((profile) => renderProfileCard(profile)).join("")}
+              </div>
+              <button type="button" id="addProfileBtn" style="margin-top:10px;">${labels.addProfile}</button>
+            </section>
+
+            <section class="day" style="padding:16px;">
+              <div class="day-head" style="padding:0;border:none;background:none;margin-bottom:10px;">
+                <div class="day-title">${labels.projectSettings}</div>
               </div>
               <div style="display:grid;gap:12px;">
                 ${(projects || []).map((project) => renderProjectCard(project)).join("")}
               </div>
-              <button type="button" id="addProjectBtn" style="margin-top:10px;">+ Dodaj projekt</button>
+              <button type="button" id="addProjectBtn" style="margin-top:10px;">${labels.addProject}</button>
             </section>
           </div>
         `;
@@ -947,6 +1025,16 @@
           state.selectedProjectId = project.id;
           saveDb();
           render();
+        });
+
+        document.querySelectorAll("[data-label-key]").forEach((input) => {
+          input.addEventListener("input", () => {
+            const key = input.dataset.labelKey;
+            db.config.labels = db.config.labels || createDefaultLabels();
+            db.config.labels[key] = input.value || createDefaultLabels()[key];
+            saveDb();
+            render();
+          });
         });
 
         document.querySelectorAll("[data-profile-id]").forEach((card) => {
@@ -1286,8 +1374,17 @@
         const profileSelect = $("#profileSelect");
         const projectSelect = $("#projectSelect");
         const config = db.config || createDefaultConfig();
+        const labels = getLabels();
         state.selectedProfileId = config.defaultProfileId || (config.profiles[0] && config.profiles[0].id) || null;
         state.selectedProjectId = config.defaultProjectId || (config.projects[0] && config.projects[0].id) || null;
+        if (document.querySelector("#appTitle")) document.querySelector("#appTitle").textContent = labels.title;
+        if (document.querySelector("#monthLabelText")) document.querySelector("#monthLabelText").textContent = labels.month;
+        if (document.querySelector("#profileLabelText")) document.querySelector("#profileLabelText").textContent = labels.profile;
+        if (document.querySelector("#projectLabelText")) document.querySelector("#projectLabelText").textContent = labels.project;
+        if (document.querySelector("#configBtn")) document.querySelector("#configBtn").textContent = labels.config;
+        if (document.querySelector("#exportBtn")) document.querySelector("#exportBtn").textContent = labels.exportJson;
+        if (document.querySelector("#importLabelText")) document.querySelector("#importLabelText").textContent = labels.importJson;
+        if (document.querySelector("#clearBtn")) document.querySelector("#clearBtn").textContent = labels.clearMonth;
 
         if (profileSelect) {
           profileSelect.innerHTML = (config.profiles || []).map((profile) => `
