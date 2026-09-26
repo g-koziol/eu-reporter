@@ -1,381 +1,1390 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ewidencja działań projektowych</title>
-<style>
-  :root{
-    --bg:#f6f7fb; --card:#fff; --text:#1f2937; --muted:#6b7280; --line:#dbe1ea;
-    --accent:#2563eb; --danger:#b91c1c; --ok:#15803d; --warn:#b45309;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
-  header{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);padding:12px}
-  .wrap{max-width:1500px;margin:auto}
-  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  button,.btn,input,select,textarea{font:inherit}
-  button,.btn{border:1px solid var(--line);background:white;border-radius:8px;padding:8px 11px;cursor:pointer}
-  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-  button.danger{color:var(--danger)}
-  input,select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;background:white}
-  textarea{min-height:72px;resize:vertical}
-  .stats{display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:8px;margin-top:10px}
-  .stat{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:10px}
-  .stat b{display:block;font-size:1.2rem}
-  .weeks{padding:14px 0 40px}
-  .week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin-bottom:10px}
-  .day{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;min-width:0}
-  .day.off{opacity:.45}
-  .day-head{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);background:#fbfcfe}
-  .day-title{font-weight:700}
-  .day-total{font-size:.9rem;color:var(--muted)}
-  .day-body{padding:10px;display:grid;gap:8px}
-  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  label{font-size:.82rem;color:var(--muted);display:grid;gap:4px}
-  details{border:1px solid var(--line);border-radius:9px;background:#fff}
-  summary{padding:9px;cursor:pointer;font-weight:600}
-  .actions{padding:0 9px 9px;display:grid;gap:8px}
-  .action{border:1px dashed var(--line);border-radius:8px;padding:8px;display:grid;gap:7px}
-  .action-top{display:grid;grid-template-columns:1.4fr .8fr .8fr auto;gap:6px;align-items:end}
-  .small{font-size:.8rem;color:var(--muted)}
-  .progress{height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin-top:8px}
-  .progress > div{height:100%;background:var(--accent);width:0}
-  .limit-over .progress > div{background:var(--danger)}
-  .limit-over #totalHours{color:var(--danger)}
-  .hidden{display:none!important}
-  .footer-note{font-size:.84rem;color:var(--muted);padding:4px 0}
-  @media (max-width:1100px){.week{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  @media (max-width:700px){
-    header{position:static}
-    .week{grid-template-columns:1fr}
-    .stats{grid-template-columns:1fr}
-    .action-top,.row2{grid-template-columns:1fr}
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ewidencja działań projektowych</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #fff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #dbe1ea;
+      --accent: #2563eb;
+      --danger: #b91c1c;
+      --ok: #15803d;
+      --warn: #b45309;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(255,255,255,.96);
+      border-bottom: 1px solid var(--line);
+      padding: 12px;
+    }
+    .wrap { max-width: 1500px; margin: auto; }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    button, .btn, input, select, textarea { font: inherit; }
+    button, .btn {
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 8px;
+      padding: 8px 11px;
+      cursor: pointer;
+    }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    button.danger { color: var(--danger); }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      background: white;
+    }
+    textarea { min-height: 72px; resize: vertical; }
+    .stats { display: grid; grid-template-columns: repeat(3,minmax(120px,1fr)); gap: 8px; margin-top: 10px; }
+    .stat { background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+    .stat b { display: block; font-size: 1.2rem; }
+    .weeks { padding: 14px 0 40px; }
+    .week { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 10px; margin-bottom: 10px; }
+    .day { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-width: 0; }
+    .day.off { opacity: .45; }
+    .day-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); background: #fbfcfe; }
+    .day-title { font-weight: 700; }
+    .day-total { font-size: .9rem; color: var(--muted); }
+    .day-body { padding: 10px; display: grid; gap: 8px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    label { font-size: .82rem; color: var(--muted); display: grid; gap: 4px; }
+    details { border: 1px solid var(--line); border-radius: 9px; background: #fff; }
+    summary { padding: 9px; cursor: pointer; font-weight: 600; }
+    .actions { padding: 0 9px 9px; display: grid; gap: 8px; }
+    .action { border: 1px dashed var(--line); border-radius: 8px; padding: 8px; display: grid; gap: 7px; }
+    .action-top { display: grid; grid-template-columns: 1.4fr .8fr .8fr auto; gap: 6px; align-items: end; }
+    .small { font-size: .8rem; color: var(--muted); }
+    .progress { height: 10px; border-radius: 999px; background: #e5e7eb; overflow: hidden; margin-top: 8px; }
+    .progress > div { height: 100%; background: var(--accent); width: 0; }
+    .limit-over .progress > div { background: var(--danger); }
+    .limit-over #totalHours { color: var(--danger); }
+    .hidden { display: none !important; }
+    .footer-note { font-size: .84rem; color: var(--muted); padding: 4px 0; }
+    @media (max-width:1100px){ .week { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+    @media (max-width:700px){
+      header { position: static; }
+      .week { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr; }
+      .action-top, .row2 { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
-<header>
-  <div class="wrap">
-    <div class="toolbar">
-      <strong>Ewidencja działań projektowych</strong>
-      <label style="width:auto">Miesiąc
-        <input id="monthPicker" type="month" style="width:auto">
-      </label>
-      <button class="primary" id="exportBtn">Eksport JSON</button>
-      <label class="btn">Import JSON
-        <input id="importInput" type="file" accept="application/json,.json" class="hidden">
-      </label>
-      <button id="clearBtn" class="danger">Wyczyść bieżący miesiąc</button>
-    </div>
-    <div id="limitBox">
-      <div class="stats">
-        <div class="stat">Wypracowano <b id="totalHours">0:00 h</b></div>
-        <div class="stat">Pozostało do 100 h <b id="remainingHours">100:00 h</b></div>
-        <div class="stat">Liczba działań <b id="actionCount">0</b></div>
-      </div>
-      <div class="progress"><div id="progressBar"></div></div>
-    </div>
-    <div class="footer-note">Dane zapisują się automatycznie w tej przeglądarce. Eksport JSON służy jako kopia zapasowa i do przenoszenia danych.</div>
-  </div>
-</header>
-
-<main class="wrap weeks" id="calendar"></main>
-
-<script>
-(() => {
-  const LIMIT_MIN = 100 * 60;
-  const STORAGE_KEY = "ewidencjaProjektowa_v1";
-  const categories = [
-    "Współpraca z OPS",
-    "Kontakt z instytucją",
-    "Działania interwencyjne",
-    "Praca administracyjno-organizacyjna",
-    "Inne"
-  ];
-
-  const $ = s => document.querySelector(s);
-  const pad = n => String(n).padStart(2,"0");
-  const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  const ym = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
-
-  let db = loadDb();
-  let currentMonth = ym(new Date());
-  $("#monthPicker").value = currentMonth;
-
-  function loadDb(){
-    try{
-      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {version:1, months:{}};
-    }catch(e){
-      return {version:1, months:{}};
-    }
-  }
-
-  function saveDb(){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-  }
-
-  function ensureMonth(key){
-    if(!db.months[key]) db.months[key] = {days:{}};
-    return db.months[key];
-  }
-
-  function ensureDay(date){
-    const m = ensureMonth(currentMonth);
-    if(!m.days[date]){
-      m.days[date] = {
-        workFrom:"",
-        workTo:"",
-        area:"",
-        nextPlan:"",
-        risks:"",
-        notes:"",
-        actions:[]
-      };
-    }
-    return m.days[date];
-  }
-
-  function esc(s=""){
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
-  function timeToMin(t){
-    if(!t || !/^\d{2}:\d{2}$/.test(t)) return null;
-    const [h,m] = t.split(":").map(Number);
-    return h*60+m;
-  }
-
-  function actionMinutes(a){
-    const s=timeToMin(a.from), e=timeToMin(a.to);
-    if(s===null || e===null) return 0;
-    return e>=s ? e-s : (24*60-s)+e;
-  }
-
-  function fmtMin(min){
-    min=Math.max(0,Math.round(min));
-    return `${Math.floor(min/60)}:${pad(min%60)} h`;
-  }
-
-  function monthGrid(key){
-    const [y,m] = key.split("-").map(Number);
-    const first = new Date(y,m-1,1);
-    const last = new Date(y,m,0);
-    const mondayIndex = (first.getDay()+6)%7;
-    const start = new Date(first);
-    start.setDate(first.getDate()-mondayIndex);
-
-    const sundayIndex = (last.getDay()+6)%7;
-    const end = new Date(last);
-    end.setDate(last.getDate()+(6-sundayIndex));
-
-    const days=[];
-    for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)) days.push(new Date(d));
-    return days;
-  }
-
-  function render(){
-    const cal=$("#calendar");
-    cal.innerHTML="";
-    const days=monthGrid(currentMonth);
-    const [cy,cm]=currentMonth.split("-").map(Number);
-    const names=["Pon","Wt","Śr","Czw","Pt","Sob","Nd"];
-
-    for(let i=0;i<days.length;i+=7){
-      const w=document.createElement("section");
-      w.className="week";
-      days.slice(i,i+7).forEach((d,idx)=>{
-        const inMonth = d.getFullYear()===cy && d.getMonth()+1===cm;
-        const date=iso(d);
-        const data=inMonth ? ensureDay(date) : null;
-        const total=inMonth ? data.actions.reduce((s,a)=>s+actionMinutes(a),0) : 0;
-
-        const el=document.createElement("article");
-        el.className="day"+(inMonth?"":" off");
-        el.innerHTML=`
-          <div class="day-head">
-            <div class="day-title">${names[idx]} ${pad(d.getDate())}.${pad(d.getMonth()+1)}</div>
-            <div class="day-total">${fmtMin(total)}</div>
-          </div>
-          ${inMonth ? dayForm(date,data) : `<div class="day-body small">Poza wybranym miesiącem</div>`}
-        `;
-        cal.appendChild(w);
-        w.appendChild(el);
-      });
-    }
-    bindInputs();
-    updateStats();
-  }
-
-  function dayForm(date,d){
-    return `
-    <div class="day-body" data-date="${date}">
-      <div class="row2">
-        <label>Zakres dnia od
-          <input type="time" data-field="workFrom" value="${esc(d.workFrom)}">
+  <header>
+    <div class="wrap">
+      <div class="toolbar">
+        <strong>Ewidencja działań projektowych</strong>
+        <label style="width:auto">Miesiąc
+          <input id="monthPicker" type="month" style="width:auto">
         </label>
-        <label>Zakres dnia do
-          <input type="time" data-field="workTo" value="${esc(d.workTo)}">
+        <label style="width:auto">Profil
+          <select id="profileSelect" style="width:auto"></select>
         </label>
+        <label style="width:auto">Projekt
+          <select id="projectSelect" style="width:auto"></select>
+        </label>
+        <button id="configBtn" class="primary" type="button">Konfiguracja</button>
+        <button id="exportBtn" type="button">Eksport JSON</button>
+        <label class="btn">Import JSON
+          <input id="importInput" type="file" accept="application/json,.json" class="hidden">
+        </label>
+        <button id="clearBtn" class="danger" type="button">Wyczyść bieżący miesiąc</button>
       </div>
-
-      <label>Obszar działania
-        <textarea data-field="area" placeholder="Ogólny obszar działań w tym dniu">${esc(d.area)}</textarea>
-      </label>
-
-      <details open>
-        <summary>Działania w ciągu dnia (${d.actions.length})</summary>
-        <div class="actions">
-          ${d.actions.map((a,i)=>actionForm(i,a)).join("")}
-          <button type="button" data-add-action>+ Dodaj działanie</button>
+      <div id="limitBox">
+        <div class="stats">
+          <div class="stat">Wypracowano <b id="totalHours">0:00 h</b></div>
+          <div class="stat">Pozostało do 100 h <b id="remainingHours">100:00 h</b></div>
+          <div class="stat">Liczba działań <b id="actionCount">0</b></div>
         </div>
-      </details>
-
-      <label>Plan dalszych działań
-        <textarea data-field="nextPlan" placeholder="Co dalej?">${esc(d.nextPlan)}</textarea>
-      </label>
-
-      <label>Trudności / ryzyka
-        <textarea data-field="risks" placeholder="Problemy, ryzyka, bariery">${esc(d.risks)}</textarea>
-      </label>
-
-      <label>Uwagi do dnia
-        <textarea data-field="notes" placeholder="Dodatkowe uwagi">${esc(d.notes)}</textarea>
-      </label>
-    </div>`;
-  }
-
-  function actionForm(i,a){
-    return `
-    <div class="action" data-action="${i}">
-      <div class="action-top">
-        <label>Kategoria
-          <select data-afield="category">
-            ${categories.map(c=>`<option ${a.category===c?"selected":""}>${esc(c)}</option>`).join("")}
-          </select>
-        </label>
-        <label>Od
-          <input type="time" data-afield="from" value="${esc(a.from||"")}">
-        </label>
-        <label>Do
-          <input type="time" data-afield="to" value="${esc(a.to||"")}">
-        </label>
-        <button type="button" class="danger" data-remove-action>Usuń</button>
+        <div class="progress"><div id="progressBar"></div></div>
       </div>
-      <label>Opis działania
-        <textarea data-afield="description" placeholder="Co zostało wykonane?">${esc(a.description||"")}</textarea>
-      </label>
-      <label>Uwagi do działania
-        <textarea data-afield="notes" placeholder="Dodatkowe informacje">${esc(a.notes||"")}</textarea>
-      </label>
-      <div class="small">Czas działania: <span data-action-duration>${fmtMin(actionMinutes(a))}</span></div>
-    </div>`;
-  }
+      <div class="footer-note">Dane zapisują się automatycznie w tej przeglądarce. Eksport JSON służy jako kopia zapasowa i do przenoszenia danych.</div>
+    </div>
+  </header>
 
-  function bindInputs(){
-    document.querySelectorAll(".day-body[data-date]").forEach(dayEl=>{
-      const date=dayEl.dataset.date;
+  <main class="wrap weeks" id="calendar"></main>
 
-      dayEl.querySelectorAll("[data-field]").forEach(input=>{
-        input.addEventListener("input",()=>{
-          ensureDay(date)[input.dataset.field]=input.value;
-          saveDb();
+  <script>
+    (() => {
+      const LIMIT_MIN = 100 * 60;
+      const STORAGE_KEY = "ewidencjaProjektowa_v1";
+      const DEFAULT_RESOLUTION = "minute";
+      const DEFAULT_VERSION = 1;
+
+      const $ = (selector) => document.querySelector(selector);
+      const pad = (n) => String(n).padStart(2, "0");
+      const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const ym = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+      const clone = (value) => JSON.parse(JSON.stringify(value));
+
+      function uid(prefix) {
+        return `${prefix}-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
+      }
+
+      function esc(value = "") {
+        return String(value).replace(/[&<>"']/g, (char) => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[char]));
+      }
+
+      function defaultWorkTypes() {
+        return [
+          {
+            id: "ops-cooperation",
+            name: "Współpraca z OPS",
+            defaultValues: { description: "", notes: "", attrs: {} },
+            attributes: []
+          },
+          {
+            id: "institution-contact",
+            name: "Kontakt z instytucją",
+            defaultValues: { description: "", notes: "", attrs: {} },
+            attributes: []
+          },
+          {
+            id: "intervention",
+            name: "Działania interwencyjne",
+            defaultValues: { description: "", notes: "", attrs: {} },
+            attributes: []
+          },
+          {
+            id: "admin",
+            name: "Praca administracyjno-organizacyjna",
+            defaultValues: { description: "", notes: "", attrs: {} },
+            attributes: []
+          },
+          {
+            id: "other",
+            name: "Inne",
+            defaultValues: { description: "", notes: "", attrs: {} },
+            attributes: []
+          }
+        ];
+      }
+
+      function defaultDayFields() {
+        return [
+          { id: "area", label: "Obszar działania", type: "textarea", defaultValue: "" },
+          { id: "nextPlan", label: "Plan dalszych działań", type: "textarea", defaultValue: "" },
+          { id: "risks", label: "Trudności / ryzyka", type: "textarea", defaultValue: "" },
+          { id: "notes", label: "Uwagi do dnia", type: "textarea", defaultValue: "" }
+        ];
+      }
+
+      function createProfile(name = "Domyślny profil") {
+        return {
+          id: uid("profile"),
+          name,
+          config: {
+            timeResolution: DEFAULT_RESOLUTION,
+            workTypes: clone(defaultWorkTypes()),
+            dayFields: clone(defaultDayFields())
+          }
+        };
+      }
+
+      function createProject(name = "Domyślny projekt") {
+        return {
+          id: uid("project"),
+          name,
+          config: {
+            timeResolution: DEFAULT_RESOLUTION,
+            workTypes: clone(defaultWorkTypes()),
+            dayFields: clone(defaultDayFields())
+          }
+        };
+      }
+
+      function createDefaultConfig() {
+        const profile = createProfile();
+        const project = createProject();
+        return {
+          version: DEFAULT_VERSION,
+          global: {
+            timeResolution: DEFAULT_RESOLUTION,
+            workTypes: clone(defaultWorkTypes()),
+            dayFields: clone(defaultDayFields())
+          },
+          profiles: [profile],
+          projects: [project],
+          defaultProfileId: profile.id,
+          defaultProjectId: project.id
+        };
+      }
+
+      function normalizeWorkType(item) {
+        if (!item || typeof item !== "object") return null;
+        const attrs = Array.isArray(item.attributes) ? item.attributes.map((attr) => ({
+          id: attr && attr.id ? String(attr.id) : uid("attr"),
+          label: (attr && attr.label) || (attr && attr.name) || "Nowy atrybut",
+          name: (attr && attr.name) || (attr && attr.label) || "Nowy atrybut",
+          type: "textarea",
+          defaultValue: (attr && attr.defaultValue) || ""
+        })) : [];
+        return {
+          id: item.id || uid("worktype"),
+          name: item.name || "Nowy typ",
+          defaultValues: {
+            description: ((item.defaultValues && item.defaultValues.description) || ""),
+            notes: ((item.defaultValues && item.defaultValues.notes) || ""),
+            attrs: Object.assign({}, item.defaultValues && item.defaultValues.attrs)
+          },
+          attributes: attrs
+        };
+      }
+
+      function normalizeDayField(item) {
+        if (!item || typeof item !== "object") return null;
+        return {
+          id: item.id || uid("field"),
+          label: item.label || item.name || "Nowe pole",
+          type: "textarea",
+          defaultValue: item.defaultValue || ""
+        };
+      }
+
+      function normalizeConfig(raw) {
+        const source = raw && typeof raw === "object" ? raw : createDefaultConfig();
+        const config = {
+          version: DEFAULT_VERSION,
+          global: {
+            timeResolution: source.global && source.global.timeResolution ? source.global.timeResolution : DEFAULT_RESOLUTION,
+            workTypes: Array.isArray(source.global && source.global.workTypes) ? source.global.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
+            dayFields: Array.isArray(source.global && source.global.dayFields) ? source.global.dayFields.map(normalizeDayField).filter(Boolean) : clone(defaultDayFields())
+          },
+          profiles: Array.isArray(source.profiles) ? source.profiles.map((profile) => ({
+            id: profile.id || uid("profile"),
+            name: profile.name || "Nowy profil",
+            config: {
+              timeResolution: profile.config && profile.config.timeResolution ? profile.config.timeResolution : DEFAULT_RESOLUTION,
+              workTypes: Array.isArray(profile.config && profile.config.workTypes) ? profile.config.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
+              dayFields: Array.isArray(profile.config && profile.config.dayFields) ? profile.config.dayFields.map(normalizeDayField).filter(Boolean) : clone(defaultDayFields())
+            }
+          })) : [createProfile()],
+          projects: Array.isArray(source.projects) ? source.projects.map((project) => ({
+            id: project.id || uid("project"),
+            name: project.name || "Nowy projekt",
+            config: {
+              timeResolution: project.config && project.config.timeResolution ? project.config.timeResolution : DEFAULT_RESOLUTION,
+              workTypes: Array.isArray(project.config && project.config.workTypes) ? project.config.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
+              dayFields: Array.isArray(project.config && project.config.dayFields) ? project.config.dayFields.map(normalizeDayField).filter(Boolean) : clone(defaultDayFields())
+            }
+          })) : [createProject()],
+          defaultProfileId: source.defaultProfileId || (source.profiles && source.profiles[0] && source.profiles[0].id) || null,
+          defaultProjectId: source.defaultProjectId || (source.projects && source.projects[0] && source.projects[0].id) || null
+        };
+
+        if (!config.profiles.length) config.profiles.push(createProfile());
+        if (!config.projects.length) config.projects.push(createProject());
+        if (!config.defaultProfileId) config.defaultProfileId = config.profiles[0].id;
+        if (!config.defaultProjectId) config.defaultProjectId = config.projects[0].id;
+        return config;
+      }
+
+      function loadDb() {
+        try {
+          const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          if (!raw) return { version: DEFAULT_VERSION, config: createDefaultConfig(), months: {} };
+          const migrated = { version: DEFAULT_VERSION, config: normalizeConfig(raw.config || raw), months: raw.months || {} };
+          migrated.config.version = DEFAULT_VERSION;
+          if (!migrated.config.global) migrated.config.global = createDefaultConfig().global;
+          if (!migrated.config.profiles || !migrated.config.profiles.length) migrated.config.profiles = [createProfile()];
+          if (!migrated.config.projects || !migrated.config.projects.length) migrated.config.projects = [createProject()];
+          return migrated;
+        } catch (err) {
+          return { version: DEFAULT_VERSION, config: createDefaultConfig(), months: {} };
+        }
+      }
+
+      function saveDb() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+      }
+
+      function timeToMin(value) {
+        if (!value || !/^\d{2}:\d{2}$/.test(value)) return null;
+        const [hours, minutes] = value.split(":").map(Number);
+        return hours * 60 + minutes;
+      }
+
+      function actionMinutes(action) {
+        const start = timeToMin(action && action.from);
+        const end = timeToMin(action && action.to);
+        if (start === null || end === null) return 0;
+        return end >= start ? end - start : (24 * 60 - start) + end;
+      }
+
+      function fmtMin(min) {
+        const rounded = Math.max(0, Math.round(min));
+        return `${Math.floor(rounded / 60)}:${pad(rounded % 60)} h`;
+      }
+
+      function normalizeResolution(value) {
+        if (value === "30m") return "30m";
+        if (value === "hour") return "hour";
+        return DEFAULT_RESOLUTION;
+      }
+
+      function stepForResolution(resolution) {
+        const value = normalizeResolution(resolution);
+        if (value === "hour") return 3600;
+        if (value === "30m") return 1800;
+        return 60;
+      }
+
+      function roundTime(value, resolution) {
+        if (!value || !/^\d{2}:\d{2}$/.test(value)) return value || "";
+        const [hours, minutes] = value.split(":").map(Number);
+        const total = (hours * 60) + minutes;
+        const step = resolution === "hour" ? 60 : resolution === "30m" ? 30 : 1;
+        const rounded = Math.max(0, Math.round(total / step) * step);
+        const h = Math.floor(rounded / 60) % 24;
+        const m = rounded % 60;
+        return `${pad(h)}:${pad(m)}`;
+      }
+
+      function monthGrid(key) {
+        const [year, month] = key.split("-").map(Number);
+        const first = new Date(year, month - 1, 1);
+        const last = new Date(year, month, 0);
+        const mondayIndex = (first.getDay() + 6) % 7;
+        const start = new Date(first);
+        start.setDate(first.getDate() - mondayIndex);
+
+        const sundayIndex = (last.getDay() + 6) % 7;
+        const end = new Date(last);
+        end.setDate(last.getDate() + (6 - sundayIndex));
+
+        const days = [];
+        for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
+          days.push(new Date(day));
+        }
+        return days;
+      }
+
+      function getSelectedProfile() {
+        return (db.config.profiles || []).find((profile) => profile.id === state.selectedProfileId) || db.config.profiles[0];
+      }
+
+      function getSelectedProject() {
+        return (db.config.projects || []).find((project) => project.id === state.selectedProjectId) || db.config.projects[0];
+      }
+
+      function getEffectiveConfig() {
+        const globalCfg = db.config.global || { timeResolution: DEFAULT_RESOLUTION, workTypes: clone(defaultWorkTypes()), dayFields: clone(defaultDayFields()) };
+        const profileCfg = getSelectedProfile() ? (getSelectedProfile().config || {}) : {};
+        const projectCfg = getSelectedProject() ? (getSelectedProject().config || {}) : {};
+
+        const effective = {
+          timeResolution: normalizeResolution(projectCfg.timeResolution || profileCfg.timeResolution || globalCfg.timeResolution || DEFAULT_RESOLUTION),
+          workTypes: projectCfg.workTypes && projectCfg.workTypes.length ? projectCfg.workTypes : (profileCfg.workTypes && profileCfg.workTypes.length ? profileCfg.workTypes : (globalCfg.workTypes || clone(defaultWorkTypes()))),
+          dayFields: projectCfg.dayFields && projectCfg.dayFields.length ? projectCfg.dayFields : (profileCfg.dayFields && profileCfg.dayFields.length ? profileCfg.dayFields : (globalCfg.dayFields || clone(defaultDayFields())))
+        };
+
+        return effective;
+      }
+
+      function buildActionDefaults(workTypeId, workTypes) {
+        const type = (workTypes || []).find((item) => item.id === workTypeId) || (workTypes || [])[0] || { defaultValues: { description: "", notes: "", attrs: {} }, attributes: [] };
+        const defaults = type.defaultValues || { description: "", notes: "", attrs: {} };
+        const attrs = {};
+        (type.attributes || []).forEach((attr) => {
+          attrs[attr.id] = ((defaults.attrs || {})[attr.id]) ?? (attr.defaultValue || "");
         });
-      });
+        return {
+          workType: type.id || "",
+          from: "",
+          to: "",
+          description: defaults.description || "",
+          notes: defaults.notes || "",
+          attrs
+        };
+      }
 
-      dayEl.querySelector("[data-add-action]").addEventListener("click",()=>{
-        ensureDay(date).actions.push({
-          category:categories[0], from:"", to:"", description:"", notes:""
+      function getMonthBucket() {
+        const monthKey = currentMonth;
+        if (!db.months[monthKey]) db.months[monthKey] = {};
+        if (!db.months[monthKey][state.selectedProfileId]) db.months[monthKey][state.selectedProfileId] = {};
+        if (!db.months[monthKey][state.selectedProfileId][state.selectedProjectId]) {
+          db.months[monthKey][state.selectedProfileId][state.selectedProjectId] = { days: {} };
+        }
+        return db.months[monthKey][state.selectedProfileId][state.selectedProjectId];
+      }
+
+      function ensureDay(date) {
+        const bucket = getMonthBucket();
+        if (!bucket.days[date]) {
+          bucket.days[date] = {
+            workFrom: "",
+            workTo: "",
+            area: "",
+            nextPlan: "",
+            risks: "",
+            notes: "",
+            extra: {},
+            actions: []
+          };
+        }
+        const fields = getEffectiveConfig().dayFields || [];
+        fields.forEach((field) => {
+          if (!field || !field.id) return;
+          if (["area", "nextPlan", "risks", "notes"].includes(field.id)) {
+            if (bucket.days[date][field.id] === undefined) bucket.days[date][field.id] = field.defaultValue || "";
+          } else if (bucket.days[date].extra[field.id] === undefined) {
+            bucket.days[date].extra[field.id] = field.defaultValue || "";
+          }
         });
-        saveDb(); render();
-      });
+        return bucket.days[date];
+      }
 
-      dayEl.querySelectorAll(".action").forEach(actionEl=>{
-        const index=Number(actionEl.dataset.action);
-        actionEl.querySelectorAll("[data-afield]").forEach(input=>{
-          input.addEventListener("input",()=>{
-            ensureDay(date).actions[index][input.dataset.afield]=input.value;
-            saveDb();
-            const span=actionEl.querySelector("[data-action-duration]");
-            span.textContent=fmtMin(actionMinutes(ensureDay(date).actions[index]));
-            const total=ensureDay(date).actions.reduce((s,a)=>s+actionMinutes(a),0);
-            dayEl.closest(".day").querySelector(".day-total").textContent=fmtMin(total);
-            updateStats();
+      function getFieldValue(day, fieldId) {
+        if (day && day.extra && Object.prototype.hasOwnProperty.call(day.extra, fieldId)) return day.extra[fieldId] || "";
+        return day && day[fieldId] ? day[fieldId] : "";
+      }
+
+      function setDayField(day, fieldId, value) {
+        if (["area", "nextPlan", "risks", "notes", "workFrom", "workTo"].includes(fieldId)) {
+          day[fieldId] = value;
+        } else {
+          day.extra = day.extra || {};
+          day.extra[fieldId] = value;
+        }
+      }
+
+      function render() {
+        if (state.configOpen) {
+          renderConfigPage();
+          return;
+        }
+
+        const calendar = $("#calendar");
+        calendar.className = "wrap weeks";
+        calendar.innerHTML = "";
+
+        const days = monthGrid(currentMonth);
+        const [year, month] = currentMonth.split("-").map(Number);
+        const names = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Nd"];
+        const cfg = getEffectiveConfig();
+
+        for (let i = 0; i < days.length; i += 7) {
+          const week = document.createElement("section");
+          week.className = "week";
+
+          days.slice(i, i + 7).forEach((dateObj, idx) => {
+            const inMonth = dateObj.getFullYear() === year && dateObj.getMonth() + 1 === month;
+            const dateKey = iso(dateObj);
+            const day = inMonth ? ensureDay(dateKey) : null;
+            const total = inMonth ? (day.actions || []).reduce((sum, action) => sum + actionMinutes(action), 0) : 0;
+
+            const article = document.createElement("article");
+            article.className = "day" + (inMonth ? "" : " off");
+            article.innerHTML = `
+              <div class="day-head">
+                <div class="day-title">${names[idx]} ${pad(dateObj.getDate())}.${pad(dateObj.getMonth() + 1)}</div>
+                <div class="day-total">${fmtMin(total)}</div>
+              </div>
+              ${inMonth ? dayForm(dateKey, day, cfg) : '<div class="day-body small">Poza wybranym miesiącem</div>'}
+            `;
+            week.appendChild(article);
+          });
+          calendar.appendChild(week);
+        }
+
+        bindMainControls();
+        updateStats();
+      }
+
+      function dayForm(dateKey, day, config) {
+        const extraFields = (config.dayFields || []).filter((field) => !["area", "nextPlan", "risks", "notes"].includes(field.id));
+        const customMarkup = extraFields.map((field) => `
+          <label>${field.label || field.id}
+            <textarea data-day-field="${field.id}" placeholder="${esc(field.label || field.id)}">${esc(getFieldValue(day, field.id))}</textarea>
+          </label>
+        `).join("");
+
+        return `
+          <div class="day-body" data-date="${dateKey}">
+            <div class="row2">
+              <label>Zakres dnia od
+                <input type="time" data-field="workFrom" value="${esc(day.workFrom || "")}" step="${stepForResolution(config.timeResolution)}">
+              </label>
+              <label>Zakres dnia do
+                <input type="time" data-field="workTo" value="${esc(day.workTo || "")}" step="${stepForResolution(config.timeResolution)}">
+              </label>
+            </div>
+
+            <label>Obszar działania
+              <textarea data-field="area" placeholder="Ogólny obszar działań w tym dniu">${esc(day.area || getFieldValue(day, "area"))}</textarea>
+            </label>
+
+            <details open>
+              <summary>Działania w ciągu dnia (${(day.actions || []).length})</summary>
+              <div class="actions">
+                ${(day.actions || []).map((action, index) => actionForm(index, action, config)).join("")}
+                <button type="button" data-add-action>+ Dodaj działanie</button>
+              </div>
+            </details>
+
+            <label>Plan dalszych działań
+              <textarea data-field="nextPlan" placeholder="Co dalej?">${esc(day.nextPlan || getFieldValue(day, "nextPlan"))}</textarea>
+            </label>
+
+            <label>Trudności / ryzyka
+              <textarea data-field="risks" placeholder="Problemy, ryzyka, bariery">${esc(day.risks || getFieldValue(day, "risks"))}</textarea>
+            </label>
+
+            <label>Uwagi do dnia
+              <textarea data-field="notes" placeholder="Dodatkowe uwagi">${esc(day.notes || getFieldValue(day, "notes"))}</textarea>
+            </label>
+
+            ${customMarkup}
+          </div>
+        `;
+      }
+
+      function actionForm(index, action, config) {
+        const type = (config.workTypes || []).find((item) => item.id === action.workType) || (config.workTypes || [])[0] || { id: "", name: "", attributes: [] };
+        const attrsMarkup = (type.attributes || []).map((attr) => `
+          <label>${esc(attr.label || attr.name || attr.id)}
+            <textarea data-afield="attrs.${attr.id}" placeholder="${esc(attr.label || attr.name || attr.id)}">${esc((action.attrs || {})[attr.id] || "")}</textarea>
+          </label>
+        `).join("");
+
+        return `
+          <div class="action" data-action="${index}">
+            <div class="action-top">
+              <label>Typ wpisu pracy
+                <select data-afield="workType">
+                  ${(config.workTypes || []).map((item) => `
+                    <option value="${esc(item.id)}" ${item.id === action.workType ? "selected" : ""}>${esc(item.name)}</option>
+                  `).join("")}
+                </select>
+              </label>
+              <label>Od
+                <input type="time" data-afield="from" value="${esc(action.from || "")}" step="${stepForResolution(config.timeResolution)}">
+              </label>
+              <label>Do
+                <input type="time" data-afield="to" value="${esc(action.to || "")}" step="${stepForResolution(config.timeResolution)}">
+              </label>
+              <button type="button" class="danger" data-remove-action>Usuń</button>
+            </div>
+            <label>Opis działania
+              <textarea data-afield="description" placeholder="Co zostało wykonane?">${esc(action.description || "")}</textarea>
+            </label>
+            ${attrsMarkup}
+            <label>Uwagi do działania
+              <textarea data-afield="notes" placeholder="Dodatkowe informacje">${esc(action.notes || "")}</textarea>
+            </label>
+            <div class="small">Czas działania: <span data-action-duration>${fmtMin(actionMinutes(action))}</span></div>
+          </div>
+        `;
+      }
+
+      function bindMainControls() {
+        document.querySelectorAll(".day-body[data-date]").forEach((dayEl) => {
+          const dateKey = dayEl.dataset.date;
+
+          dayEl.querySelectorAll("[data-field]").forEach((input) => {
+            input.addEventListener("input", () => {
+              const day = ensureDay(dateKey);
+              const field = input.dataset.field;
+              if (field === "workFrom" || field === "workTo") {
+                const value = roundTime(input.value, getEffectiveConfig().timeResolution);
+                input.value = value;
+                day[field] = value;
+              } else {
+                setDayField(day, field, input.value);
+              }
+              saveDb();
+            });
+          });
+
+          dayEl.querySelectorAll("[data-day-field]").forEach((input) => {
+            input.addEventListener("input", () => {
+              const day = ensureDay(dateKey);
+              setDayField(day, input.dataset.dayField, input.value);
+              saveDb();
+            });
+          });
+
+          const addButton = dayEl.querySelector("[data-add-action]");
+          if (addButton) {
+            addButton.addEventListener("click", () => {
+              const day = ensureDay(dateKey);
+              const type = (getEffectiveConfig().workTypes || [])[0];
+              const newAction = type ? buildActionDefaults(type.id, getEffectiveConfig().workTypes) : { workType: "", from: "", to: "", description: "", notes: "", attrs: {} };
+              day.actions.push(newAction);
+              saveDb();
+              render();
+            });
+          }
+
+          dayEl.querySelectorAll(".action").forEach((actionEl) => {
+            const index = Number(actionEl.dataset.action);
+            actionEl.querySelectorAll("[data-afield]").forEach((input) => {
+              input.addEventListener("input", () => {
+                const day = ensureDay(dateKey);
+                const action = day.actions[index];
+                const field = input.dataset.afield;
+
+                if (field === "workType") {
+                  action.workType = input.value;
+                  const selectedType = (getEffectiveConfig().workTypes || []).find((item) => item.id === input.value);
+                  if (selectedType) {
+                    const defaults = buildActionDefaults(selectedType.id, getEffectiveConfig().workTypes);
+                    action.description = defaults.description;
+                    action.notes = defaults.notes;
+                    action.attrs = defaults.attrs || {};
+                    actionEl.querySelector('[data-afield="description"]').value = defaults.description;
+                    actionEl.querySelector('[data-afield="notes"]').value = defaults.notes;
+                  }
+                } else if (field === "from" || field === "to") {
+                  action[field] = roundTime(input.value, getEffectiveConfig().timeResolution);
+                } else if (field === "description" || field === "notes") {
+                  action[field] = input.value;
+                } else if (field.startsWith("attrs.")) {
+                  const attrId = field.replace("attrs.", "");
+                  action.attrs = action.attrs || {};
+                  action.attrs[attrId] = input.value;
+                }
+
+                const duration = actionEl.querySelector("[data-action-duration]");
+                duration.textContent = fmtMin(actionMinutes(action));
+                const totalMinutes = (day.actions || []).reduce((sum, item) => sum + actionMinutes(item), 0);
+                dayEl.closest(".day").querySelector(".day-total").textContent = fmtMin(totalMinutes);
+                saveDb();
+                updateStats();
+              });
+            });
+
+            const removeButton = actionEl.querySelector("[data-remove-action]");
+            if (removeButton) {
+              removeButton.addEventListener("click", () => {
+                const day = ensureDay(dateKey);
+                day.actions.splice(index, 1);
+                saveDb();
+                render();
+              });
+            }
           });
         });
-        actionEl.querySelector("[data-remove-action]").addEventListener("click",()=>{
-          ensureDay(date).actions.splice(index,1);
-          saveDb(); render();
+      }
+
+      function updateStats() {
+        const bucket = getMonthBucket();
+        let totalMinutes = 0;
+        let count = 0;
+        Object.values(bucket.days || {}).forEach((day) => {
+          (day.actions || []).forEach((action) => {
+            totalMinutes += actionMinutes(action);
+            count += 1;
+          });
         });
+
+        $("#totalHours").textContent = fmtMin(totalMinutes);
+        $("#remainingHours").textContent = fmtMin(Math.max(0, LIMIT_MIN - totalMinutes));
+        $("#actionCount").textContent = String(count);
+        const pct = Math.min(100, (totalMinutes / LIMIT_MIN) * 100);
+        $("#progressBar").style.width = `${pct}%`;
+        $("#limitBox").classList.toggle("limit-over", totalMinutes > LIMIT_MIN);
+      }
+
+      function renderWorkTypeEditor(type) {
+        const defaults = type.defaultValues || { description: "", notes: "", attrs: {} };
+        const attributes = type.attributes || [];
+        return `
+          <div class="action" data-work-type-id="${type.id}" style="padding:10px;">
+            <div class="row2">
+              <label>Nazwa typu zapisów
+                <input type="text" data-work-type-name value="${esc(type.name || "")}">
+              </label>
+              <button type="button" class="danger" data-remove-work-type>Usuń</button>
+            </div>
+            <label>Domyślny opis
+              <textarea data-default-description>${esc(defaults.description || "")}</textarea>
+            </label>
+            <label>Domyślne uwagi
+              <textarea data-default-notes>${esc(defaults.notes || "")}</textarea>
+            </label>
+            <div class="small">Atrybuty typu</div>
+            <div style="display:grid;gap:8px;margin:8px 0;">
+              ${attributes.map((attr) => renderAttributeEditor(attr)).join("")}
+            </div>
+            <button type="button" data-add-attribute>+ Dodaj atrybut</button>
+          </div>
+        `;
+      }
+
+      function renderAttributeEditor(attr) {
+        return `
+          <div class="action" data-attribute-id="${attr.id}" style="padding:8px;">
+            <div class="row2">
+              <label>Nazwa atrybutu
+                <input type="text" data-attribute-name value="${esc(attr.label || attr.name || attr.id)}">
+              </label>
+              <button type="button" class="danger" data-remove-attribute>Usuń</button>
+            </div>
+            <label>Domyślna wartość
+              <textarea data-attribute-default>${esc(attr.defaultValue || "")}</textarea>
+            </label>
+            <div class="small">Typ: textarea</div>
+          </div>
+        `;
+      }
+
+      function renderDayFieldEditor(field) {
+        return `
+          <div class="action" data-day-field-id="${field.id}" style="padding:8px;">
+            <div class="row2">
+              <label>Etykieta pola
+                <input type="text" data-day-field-label value="${esc(field.label || field.id)}">
+              </label>
+              <button type="button" class="danger" data-remove-day-field>Usuń</button>
+            </div>
+            <div class="small">Typ: textarea</div>
+          </div>
+        `;
+      }
+
+      function renderProfileCard(profile) {
+        const workTypes = profile.config.workTypes || [];
+        const dayFields = profile.config.dayFields || [];
+        return `
+          <article class="action" data-profile-id="${profile.id}" style="padding:12px;">
+            <div class="row2" style="margin-bottom:12px;">
+              <label>Nazwa profilu
+                <input type="text" data-profile-name value="${esc(profile.name)}">
+              </label>
+              <label>Rozdzielczość czasu
+                <select data-profile-resolution>
+                  <option value="minute" ${((profile.config.timeResolution || DEFAULT_RESOLUTION) === "minute") ? "selected" : ""}>Minuty</option>
+                  <option value="30m" ${((profile.config.timeResolution || DEFAULT_RESOLUTION) === "30m") ? "selected" : ""}>30 minut</option>
+                  <option value="hour" ${((profile.config.timeResolution || DEFAULT_RESOLUTION) === "hour") ? "selected" : ""}>Godziny</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="small">Typy wpisów pracy</div>
+            <div style="display:grid;gap:8px;margin:8px 0;">
+              ${workTypes.map((type) => renderWorkTypeEditor(type)).join("")}
+            </div>
+            <button type="button" data-add-work-type>+ Dodaj typ wpisu</button>
+
+            <div class="small" style="margin-top:12px;">Pola dodatkowe w dniu</div>
+            <div style="display:grid;gap:8px;margin:8px 0;">
+              ${dayFields.map((field) => renderDayFieldEditor(field)).join("")}
+            </div>
+            <button type="button" data-add-day-field>+ Dodaj pole dnia</button>
+
+            <button type="button" class="danger" data-remove-profile style="margin-top:12px;">Usuń profil</button>
+          </article>
+        `;
+      }
+
+      function renderProjectCard(project) {
+        const workTypes = project.config.workTypes || [];
+        const dayFields = project.config.dayFields || [];
+        return `
+          <article class="action" data-project-id="${project.id}" style="padding:12px;">
+            <div class="row2" style="margin-bottom:12px;">
+              <label>Nazwa projektu
+                <input type="text" data-project-name value="${esc(project.name)}">
+              </label>
+              <label>Rozdzielczość czasu
+                <select data-project-resolution>
+                  <option value="minute" ${((project.config.timeResolution || DEFAULT_RESOLUTION) === "minute") ? "selected" : ""}>Minuty</option>
+                  <option value="30m" ${((project.config.timeResolution || DEFAULT_RESOLUTION) === "30m") ? "selected" : ""}>30 minut</option>
+                  <option value="hour" ${((project.config.timeResolution || DEFAULT_RESOLUTION) === "hour") ? "selected" : ""}>Godziny</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="small">Typy wpisów pracy</div>
+            <div style="display:grid;gap:8px;margin:8px 0;">
+              ${workTypes.map((type) => renderWorkTypeEditor(type)).join("")}
+            </div>
+            <button type="button" data-add-work-type>+ Dodaj typ wpisu</button>
+
+            <div class="small" style="margin-top:12px;">Pola dodatkowe w dniu</div>
+            <div style="display:grid;gap:8px;margin:8px 0;">
+              ${dayFields.map((field) => renderDayFieldEditor(field)).join("")}
+            </div>
+            <button type="button" data-add-day-field>+ Dodaj pole dnia</button>
+
+            <button type="button" class="danger" data-remove-project style="margin-top:12px;">Usuń projekt</button>
+          </article>
+        `;
+      }
+
+      function renderConfigPage() {
+        const config = db.config || createDefaultConfig();
+        const profiles = config.profiles || [];
+        const projects = config.projects || [];
+        const globalCfg = config.global || { timeResolution: DEFAULT_RESOLUTION, workTypes: clone(defaultWorkTypes()), dayFields: clone(defaultDayFields()) };
+
+        $("#calendar").className = "wrap";
+        $("#calendar").innerHTML = `
+          <div style="padding:20px 0 40px;display:grid;gap:18px;">
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+              <h2 style="margin:0;">Konfiguracja</h2>
+              <button id="backToCalendarBtn" class="primary" type="button">Powrót do kalendarza</button>
+            </div>
+
+            <section class="day" style="padding:16px;">
+              <div class="day-head" style="padding:0;border:none;background:none;margin-bottom:10px;">
+                <div class="day-title">Ustawienia globalne</div>
+              </div>
+              <div class="row2">
+                <label>Domyślny profil
+                  <select id="defaultProfileSelect">
+                    ${(profiles || []).map((profile) => `
+                      <option value="${profile.id}" ${config.defaultProfileId === profile.id ? "selected" : ""}>${esc(profile.name)}</option>
+                    `).join("")}
+                  </select>
+                </label>
+                <label>Domyślny projekt
+                  <select id="defaultProjectSelect">
+                    ${(projects || []).map((project) => `
+                      <option value="${project.id}" ${config.defaultProjectId === project.id ? "selected" : ""}>${esc(project.name)}</option>
+                    `).join("")}
+                  </select>
+                </label>
+              </div>
+              <label>Rozdzielczość czasu globalna
+                <select id="globalResolutionSelect">
+                  <option value="minute" ${(globalCfg.timeResolution || DEFAULT_RESOLUTION) === "minute" ? "selected" : ""}>Minuty</option>
+                  <option value="30m" ${(globalCfg.timeResolution || DEFAULT_RESOLUTION) === "30m" ? "selected" : ""}>30 minut</option>
+                  <option value="hour" ${(globalCfg.timeResolution || DEFAULT_RESOLUTION) === "hour" ? "selected" : ""}>Godziny</option>
+                </select>
+              </label>
+              <div class="small">Konfiguracja jest wersjonowana. Obecna wersja: ${config.version || DEFAULT_VERSION}</div>
+            </section>
+
+            <section class="day" style="padding:16px;">
+              <div class="day-head" style="padding:0;border:none;background:none;margin-bottom:10px;">
+                <div class="day-title">Profile</div>
+              </div>
+              <div style="display:grid;gap:12px;">
+                ${(profiles || []).map((profile) => renderProfileCard(profile)).join("")}
+              </div>
+              <button type="button" id="addProfileBtn" style="margin-top:10px;">+ Dodaj profil</button>
+            </section>
+
+            <section class="day" style="padding:16px;">
+              <div class="day-head" style="padding:0;border:none;background:none;margin-bottom:10px;">
+                <div class="day-title">Projekty</div>
+              </div>
+              <div style="display:grid;gap:12px;">
+                ${(projects || []).map((project) => renderProjectCard(project)).join("")}
+              </div>
+              <button type="button" id="addProjectBtn" style="margin-top:10px;">+ Dodaj projekt</button>
+            </section>
+          </div>
+        `;
+
+        $("#backToCalendarBtn").addEventListener("click", () => {
+          state.configOpen = false;
+          render();
+        });
+
+        $("#defaultProfileSelect").addEventListener("change", (event) => {
+          db.config.defaultProfileId = event.target.value;
+          state.selectedProfileId = event.target.value;
+          saveDb();
+          render();
+        });
+
+        $("#defaultProjectSelect").addEventListener("change", (event) => {
+          db.config.defaultProjectId = event.target.value;
+          state.selectedProjectId = event.target.value;
+          saveDb();
+          render();
+        });
+
+        $("#globalResolutionSelect").addEventListener("change", (event) => {
+          db.config.global.timeResolution = normalizeResolution(event.target.value);
+          saveDb();
+          render();
+        });
+
+        $("#addProfileBtn").addEventListener("click", () => {
+          const profile = createProfile(`Nowy profil ${db.config.profiles.length + 1}`);
+          db.config.profiles.push(profile);
+          db.config.defaultProfileId = profile.id;
+          state.selectedProfileId = profile.id;
+          saveDb();
+          render();
+        });
+
+        $("#addProjectBtn").addEventListener("click", () => {
+          const project = createProject(`Nowy projekt ${db.config.projects.length + 1}`);
+          db.config.projects.push(project);
+          db.config.defaultProjectId = project.id;
+          state.selectedProjectId = project.id;
+          saveDb();
+          render();
+        });
+
+        document.querySelectorAll("[data-profile-id]").forEach((card) => {
+          const profileId = card.dataset.profileId;
+          const profile = (db.config.profiles || []).find((item) => item.id === profileId);
+          if (!profile) return;
+
+          const nameInput = card.querySelector("[data-profile-name]");
+          if (nameInput) {
+            nameInput.addEventListener("input", () => {
+              profile.name = nameInput.value || "Nowy profil";
+              saveDb();
+            });
+          }
+
+          const resolutionInput = card.querySelector("[data-profile-resolution]");
+          if (resolutionInput) {
+            resolutionInput.addEventListener("change", () => {
+              profile.config.timeResolution = normalizeResolution(resolutionInput.value);
+              saveDb();
+            });
+          }
+
+          const removeButton = card.querySelector("[data-remove-profile]");
+          if (removeButton) {
+            removeButton.addEventListener("click", () => {
+              if ((db.config.profiles || []).length <= 1) return;
+              db.config.profiles = db.config.profiles.filter((item) => item.id !== profileId);
+              if (db.config.defaultProfileId === profileId) db.config.defaultProfileId = db.config.profiles[0].id;
+              if (state.selectedProfileId === profileId) state.selectedProfileId = db.config.profiles[0].id;
+              saveDb();
+              render();
+            });
+          }
+
+          const addTypeBtn = card.querySelector("[data-add-work-type]");
+          if (addTypeBtn) {
+            addTypeBtn.addEventListener("click", () => {
+              const type = { id: uid("worktype"), name: "Nowy typ", defaultValues: { description: "", notes: "", attrs: {} }, attributes: [] };
+              profile.config.workTypes = profile.config.workTypes || [];
+              profile.config.workTypes.push(type);
+              saveDb();
+              render();
+            });
+          }
+
+          const addFieldBtn = card.querySelector("[data-add-day-field]");
+          if (addFieldBtn) {
+            addFieldBtn.addEventListener("click", () => {
+              profile.config.dayFields = profile.config.dayFields || [];
+              profile.config.dayFields.push({ id: uid("field"), label: "Nowe pole", type: "textarea", defaultValue: "" });
+              saveDb();
+              render();
+            });
+          }
+
+          card.querySelectorAll("[data-work-type-id]").forEach((typeCard) => {
+            const type = (profile.config.workTypes || []).find((item) => item.id === typeCard.dataset.workTypeId);
+            if (!type) return;
+
+            const typeNameInput = typeCard.querySelector("[data-work-type-name]");
+            if (typeNameInput) {
+              typeNameInput.addEventListener("input", () => {
+                type.name = typeNameInput.value || "Nowy typ";
+                saveDb();
+              });
+            }
+
+            const defaultDescription = typeCard.querySelector("[data-default-description]");
+            if (defaultDescription) {
+              defaultDescription.addEventListener("input", () => {
+                type.defaultValues = type.defaultValues || { description: "", notes: "", attrs: {} };
+                type.defaultValues.description = defaultDescription.value;
+                saveDb();
+              });
+            }
+
+            const defaultNotes = typeCard.querySelector("[data-default-notes]");
+            if (defaultNotes) {
+              defaultNotes.addEventListener("input", () => {
+                type.defaultValues = type.defaultValues || { description: "", notes: "", attrs: {} };
+                type.defaultValues.notes = defaultNotes.value;
+                saveDb();
+              });
+            }
+
+            const addAttrButton = typeCard.querySelector("[data-add-attribute]");
+            if (addAttrButton) {
+              addAttrButton.addEventListener("click", () => {
+                type.attributes = type.attributes || [];
+                type.attributes.push({ id: uid("attr"), label: "Nowy atrybut", name: "Nowy atrybut", type: "textarea", defaultValue: "" });
+                saveDb();
+                render();
+              });
+            }
+
+            const removeTypeButton = typeCard.querySelector("[data-remove-work-type]");
+            if (removeTypeButton) {
+              removeTypeButton.addEventListener("click", () => {
+                profile.config.workTypes = (profile.config.workTypes || []).filter((item) => item.id !== type.id);
+                saveDb();
+                render();
+              });
+            }
+
+            typeCard.querySelectorAll("[data-attribute-id]").forEach((attrCard) => {
+              const attr = (type.attributes || []).find((item) => item.id === attrCard.dataset.attributeId);
+              if (!attr) return;
+
+              const nameInput = attrCard.querySelector("[data-attribute-name]");
+              if (nameInput) {
+                nameInput.addEventListener("input", () => {
+                  attr.label = nameInput.value || "Nowy atrybut";
+                  attr.name = nameInput.value || "Nowy atrybut";
+                  saveDb();
+                });
+              }
+
+              const defaultValueInput = attrCard.querySelector("[data-attribute-default]");
+              if (defaultValueInput) {
+                defaultValueInput.addEventListener("input", () => {
+                  attr.defaultValue = defaultValueInput.value;
+                  type.defaultValues = type.defaultValues || { description: "", notes: "", attrs: {} };
+                  type.defaultValues.attrs = type.defaultValues.attrs || {};
+                  type.defaultValues.attrs[attr.id] = defaultValueInput.value;
+                  saveDb();
+                });
+              }
+
+              const removeButton = attrCard.querySelector("[data-remove-attribute]");
+              if (removeButton) {
+                removeButton.addEventListener("click", () => {
+                  type.attributes = (type.attributes || []).filter((item) => item.id !== attr.id);
+                  if (type.defaultValues && type.defaultValues.attrs) delete type.defaultValues.attrs[attr.id];
+                  saveDb();
+                  render();
+                });
+              }
+            });
+          });
+
+          card.querySelectorAll("[data-day-field-id]").forEach((fieldCard) => {
+            const field = (profile.config.dayFields || []).find((item) => item.id === fieldCard.dataset.dayFieldId);
+            if (!field) return;
+
+            const nameInput = fieldCard.querySelector("[data-day-field-label]");
+            if (nameInput) {
+              nameInput.addEventListener("input", () => {
+                field.label = nameInput.value || "Nowe pole";
+                saveDb();
+              });
+            }
+
+            const removeButton = fieldCard.querySelector("[data-remove-day-field]");
+            if (removeButton) {
+              removeButton.addEventListener("click", () => {
+                profile.config.dayFields = (profile.config.dayFields || []).filter((item) => item.id !== field.id);
+                saveDb();
+                render();
+              });
+            }
+          });
+        });
+
+        document.querySelectorAll("[data-project-id]").forEach((card) => {
+          const projectId = card.dataset.projectId;
+          const project = (db.config.projects || []).find((item) => item.id === projectId);
+          if (!project) return;
+
+          const nameInput = card.querySelector("[data-project-name]");
+          if (nameInput) {
+            nameInput.addEventListener("input", () => {
+              project.name = nameInput.value || "Nowy projekt";
+              saveDb();
+            });
+          }
+
+          const resolutionInput = card.querySelector("[data-project-resolution]");
+          if (resolutionInput) {
+            resolutionInput.addEventListener("change", () => {
+              project.config.timeResolution = normalizeResolution(resolutionInput.value);
+              saveDb();
+            });
+          }
+
+          const removeButton = card.querySelector("[data-remove-project]");
+          if (removeButton) {
+            removeButton.addEventListener("click", () => {
+              if ((db.config.projects || []).length <= 1) return;
+              db.config.projects = db.config.projects.filter((item) => item.id !== projectId);
+              if (db.config.defaultProjectId === projectId) db.config.defaultProjectId = db.config.projects[0].id;
+              if (state.selectedProjectId === projectId) state.selectedProjectId = db.config.projects[0].id;
+              saveDb();
+              render();
+            });
+          }
+
+          const addTypeBtn = card.querySelector("[data-add-work-type]");
+          if (addTypeBtn) {
+            addTypeBtn.addEventListener("click", () => {
+              project.config.workTypes = project.config.workTypes || [];
+              project.config.workTypes.push({ id: uid("worktype"), name: "Nowy typ", defaultValues: { description: "", notes: "", attrs: {} }, attributes: [] });
+              saveDb();
+              render();
+            });
+          }
+
+          const addFieldBtn = card.querySelector("[data-add-day-field]");
+          if (addFieldBtn) {
+            addFieldBtn.addEventListener("click", () => {
+              project.config.dayFields = project.config.dayFields || [];
+              project.config.dayFields.push({ id: uid("field"), label: "Nowe pole", type: "textarea", defaultValue: "" });
+              saveDb();
+              render();
+            });
+          }
+
+          card.querySelectorAll("[data-work-type-id]").forEach((typeCard) => {
+            const type = (project.config.workTypes || []).find((item) => item.id === typeCard.dataset.workTypeId);
+            if (!type) return;
+
+            const typeNameInput = typeCard.querySelector("[data-work-type-name]");
+            if (typeNameInput) {
+              typeNameInput.addEventListener("input", () => {
+                type.name = typeNameInput.value || "Nowy typ";
+                saveDb();
+              });
+            }
+
+            const defaultDescription = typeCard.querySelector("[data-default-description]");
+            if (defaultDescription) {
+              defaultDescription.addEventListener("input", () => {
+                type.defaultValues = type.defaultValues || { description: "", notes: "", attrs: {} };
+                type.defaultValues.description = defaultDescription.value;
+                saveDb();
+              });
+            }
+
+            const defaultNotes = typeCard.querySelector("[data-default-notes]");
+            if (defaultNotes) {
+              defaultNotes.addEventListener("input", () => {
+                type.defaultValues = type.defaultValues || { description: "", notes: "", attrs: {} };
+                type.defaultValues.notes = defaultNotes.value;
+                saveDb();
+              });
+            }
+
+            const addAttrButton = typeCard.querySelector("[data-add-attribute]");
+            if (addAttrButton) {
+              addAttrButton.addEventListener("click", () => {
+                type.attributes = type.attributes || [];
+                type.attributes.push({ id: uid("attr"), label: "Nowy atrybut", name: "Nowy atrybut", type: "textarea", defaultValue: "" });
+                saveDb();
+                render();
+              });
+            }
+
+            const removeTypeButton = typeCard.querySelector("[data-remove-work-type]");
+            if (removeTypeButton) {
+              removeTypeButton.addEventListener("click", () => {
+                project.config.workTypes = (project.config.workTypes || []).filter((item) => item.id !== type.id);
+                saveDb();
+                render();
+              });
+            }
+
+            typeCard.querySelectorAll("[data-attribute-id]").forEach((attrCard) => {
+              const attr = (type.attributes || []).find((item) => item.id === attrCard.dataset.attributeId);
+              if (!attr) return;
+
+              const nameInput = attrCard.querySelector("[data-attribute-name]");
+              if (nameInput) {
+                nameInput.addEventListener("input", () => {
+                  attr.label = nameInput.value || "Nowy atrybut";
+                  attr.name = nameInput.value || "Nowy atrybut";
+                  saveDb();
+                });
+              }
+
+              const defaultValueInput = attrCard.querySelector("[data-attribute-default]");
+              if (defaultValueInput) {
+                defaultValueInput.addEventListener("input", () => {
+                  attr.defaultValue = defaultValueInput.value;
+                  type.defaultValues = type.defaultValues || { description: "", notes: "", attrs: {} };
+                  type.defaultValues.attrs = type.defaultValues.attrs || {};
+                  type.defaultValues.attrs[attr.id] = defaultValueInput.value;
+                  saveDb();
+                });
+              }
+
+              const removeButton = attrCard.querySelector("[data-remove-attribute]");
+              if (removeButton) {
+                removeButton.addEventListener("click", () => {
+                  type.attributes = (type.attributes || []).filter((item) => item.id !== attr.id);
+                  if (type.defaultValues && type.defaultValues.attrs) delete type.defaultValues.attrs[attr.id];
+                  saveDb();
+                  render();
+                });
+              }
+            });
+          });
+
+          card.querySelectorAll("[data-day-field-id]").forEach((fieldCard) => {
+            const field = (project.config.dayFields || []).find((item) => item.id === fieldCard.dataset.dayFieldId);
+            if (!field) return;
+
+            const nameInput = fieldCard.querySelector("[data-day-field-label]");
+            if (nameInput) {
+              nameInput.addEventListener("input", () => {
+                field.label = nameInput.value || "Nowe pole";
+                saveDb();
+              });
+            }
+
+            const removeButton = fieldCard.querySelector("[data-remove-day-field]");
+            if (removeButton) {
+              removeButton.addEventListener("click", () => {
+                project.config.dayFields = (project.config.dayFields || []).filter((item) => item.id !== field.id);
+                saveDb();
+                render();
+              });
+            }
+          });
+        });
+      }
+
+      const state = {
+        selectedProfileId: null,
+        selectedProjectId: null,
+        configOpen: false
+      };
+
+      let currentMonth = ym(new Date());
+      let db = loadDb();
+
+      function initializeSelectors() {
+        const profileSelect = $("#profileSelect");
+        const projectSelect = $("#projectSelect");
+        const config = db.config || createDefaultConfig();
+        state.selectedProfileId = config.defaultProfileId || (config.profiles[0] && config.profiles[0].id) || null;
+        state.selectedProjectId = config.defaultProjectId || (config.projects[0] && config.projects[0].id) || null;
+
+        if (profileSelect) {
+          profileSelect.innerHTML = (config.profiles || []).map((profile) => `
+            <option value="${profile.id}" ${profile.id === state.selectedProfileId ? "selected" : ""}>${esc(profile.name)}</option>
+          `).join("");
+          profileSelect.value = state.selectedProfileId;
+          profileSelect.addEventListener("change", (event) => {
+            state.selectedProfileId = event.target.value;
+            db.config.defaultProfileId = event.target.value;
+            saveDb();
+            render();
+          });
+        }
+
+        if (projectSelect) {
+          projectSelect.innerHTML = (config.projects || []).map((project) => `
+            <option value="${project.id}" ${project.id === state.selectedProjectId ? "selected" : ""}>${esc(project.name)}</option>
+          `).join("");
+          projectSelect.value = state.selectedProjectId;
+          projectSelect.addEventListener("change", (event) => {
+            state.selectedProjectId = event.target.value;
+            db.config.defaultProjectId = event.target.value;
+            saveDb();
+            render();
+          });
+        }
+
+        $("#configBtn").addEventListener("click", () => {
+          state.configOpen = true;
+          render();
+        });
+      }
+
+      $("#monthPicker").addEventListener("change", (event) => {
+        currentMonth = event.target.value || currentMonth;
+        render();
       });
-    });
-  }
 
-  function updateStats(){
-    const m=ensureMonth(currentMonth);
-    let min=0,count=0;
-    Object.values(m.days).forEach(d=>{
-      (d.actions||[]).forEach(a=>{ min+=actionMinutes(a); count++; });
-    });
-    $("#totalHours").textContent=fmtMin(min);
-    $("#remainingHours").textContent=fmtMin(Math.max(0,LIMIT_MIN-min));
-    $("#actionCount").textContent=count;
-    const pct=Math.min(100,(min/LIMIT_MIN)*100);
-    $("#progressBar").style.width=pct+"%";
-    $("#limitBox").classList.toggle("limit-over", min>LIMIT_MIN);
-  }
+      $("#exportBtn").addEventListener("click", () => {
+        saveDb();
+        const payload = {
+          app: "Ewidencja działań projektowych",
+          version: DEFAULT_VERSION,
+          exportedAt: new Date().toISOString(),
+          data: db
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `ewidencja-${currentMonth}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(link.href);
+      });
 
-  $("#monthPicker").addEventListener("change", e=>{
-    currentMonth=e.target.value || currentMonth;
-    render();
-  });
+      $("#importInput").addEventListener("change", async (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        try {
+          const parsed = JSON.parse(await file.text());
+          const incoming = parsed && parsed.data ? parsed.data : parsed;
+          if (!incoming || typeof incoming !== "object" || !incoming.months) {
+            throw new Error("Nieprawidłowy format pliku");
+          }
+          db = {
+            version: DEFAULT_VERSION,
+            config: normalizeConfig(incoming.config || incoming),
+            months: incoming.months || {}
+          };
+          saveDb();
+          initializeSelectors();
+          render();
+          alert("Import zakończony.");
+        } catch (err) {
+          alert("Nie udało się wczytać pliku JSON: " + err.message);
+        } finally {
+          event.target.value = "";
+        }
+      });
 
-  $("#exportBtn").addEventListener("click",()=>{
-    saveDb();
-    const payload={
-      app:"Ewidencja działań projektowych",
-      version:1,
-      exportedAt:new Date().toISOString(),
-      data:db
-    };
-    const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);
-    a.download=`ewidencja-${currentMonth}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(a.href);
-  });
+      $("#clearBtn").addEventListener("click", () => {
+        const monthBucket = db.months[currentMonth] || {};
+        if (!monthBucket || !monthBucket[state.selectedProfileId] || !monthBucket[state.selectedProfileId][state.selectedProjectId]) {
+          return;
+        }
+        if (confirm(`Usunąć wszystkie dane dla ${currentMonth}?`)) {
+          delete monthBucket[state.selectedProfileId][state.selectedProjectId];
+          saveDb();
+          render();
+        }
+      });
 
-  $("#importInput").addEventListener("change", async e=>{
-    const file=e.target.files?.[0];
-    if(!file) return;
-    try{
-      const parsed=JSON.parse(await file.text());
-      const incoming=parsed.data || parsed;
-      if(!incoming || typeof incoming!=="object" || !incoming.months) throw new Error("Nieprawidłowy format");
-      db=incoming;
-      saveDb();
+      $("#monthPicker").value = currentMonth;
+      initializeSelectors();
       render();
-      alert("Import zakończony.");
-    }catch(err){
-      alert("Nie udało się wczytać pliku JSON: "+err.message);
-    }finally{
-      e.target.value="";
-    }
-  });
-
-  $("#clearBtn").addEventListener("click",()=>{
-    if(confirm(`Usunąć wszystkie dane dla ${currentMonth}?`)){
-      delete db.months[currentMonth];
-      saveDb();
-      render();
-    }
-  });
-
-  render();
-})();
-</script>
+    })();
+  </script>
 </body>
 </html>
