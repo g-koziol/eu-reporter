@@ -177,6 +177,7 @@
     <div class="wrap">
       <div class="toolbar">
         <strong id="appTitle">Ewidencja działań projektowych</strong>
+        <button id="pageInfoBtn" class="page-info-btn" type="button" aria-label="Pokaż informacje o stronie">i</button>
         <label style="width:auto"><span id="monthLabelText">Miesiąc</span>
           <input id="monthPicker" type="month" style="width:auto">
         </label>
@@ -204,17 +205,6 @@
       <div class="footer-note">Dane zapisują się automatycznie w tej przeglądarce. Eksport JSON służy jako kopia zapasowa i do przenosowania danych.</div>
     </div>
   </header>
-
-  <section class="wrap page-info" aria-label="Informacje o stronie">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-      <div>
-        <h2 id="pageInfoTitle">Informacje o stronie</h2>
-        <p id="pageInfoSummary">Ta aplikacja służy do ewidencji czasu pracy w ramach projektów i działań. Umożliwia szybkie zapisanie godzin, kontrolę limitu oraz eksport danych do pliku JSON.</p>
-      </div>
-      <button id="pageInfoBtn" class="page-info-btn" type="button" aria-label="Pokaż informacje o stronie">i</button>
-    </div>
-    <div id="pageInfoGrid" class="page-info-grid"></div>
-  </section>
 
   <main class="wrap weeks" id="calendar"></main>
 
@@ -770,19 +760,6 @@
 
       function renderPageInfo() {
         const info = getPageInfo();
-        const title = document.querySelector("#pageInfoTitle");
-        const grid = document.querySelector("#pageInfoGrid");
-        const summary = document.querySelector("#pageInfoSummary");
-        if (title) title.textContent = info.title;
-        if (summary) summary.textContent = info.summary;
-        if (grid) {
-          grid.innerHTML = (info.cards || []).map((card) => `
-            <div class="page-info-item">
-              <strong>${esc(card.title || "")}</strong>
-              <span>${esc(card.body || "")}</span>
-            </div>
-          `).join("");
-        }
 
         const footer = document.querySelector("#pageFooter");
         if (footer) {
