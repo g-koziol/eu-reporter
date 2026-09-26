@@ -318,6 +318,22 @@
         ];
       }
 
+      function defaultCollaborationRecordAttributes() {
+        return [
+          { id: "person", label: "Osoba / kontakt", type: "textarea", defaultValue: "" },
+          { id: "institution", label: "Instytucja / dział", type: "textarea", defaultValue: "" },
+          { id: "topic", label: "Temat współpracy", type: "textarea", defaultValue: "" },
+          { id: "notes", label: "Uwagi", type: "textarea", defaultValue: "" }
+        ];
+      }
+
+      function defaultCollaborationRecordConfig() {
+        return {
+          title: "Współpraca z osobami",
+          attributes: clone(defaultCollaborationRecordAttributes())
+        };
+      }
+
       function createProfile(name = "Domyślny profil") {
         return {
           id: uid("profile"),
@@ -329,7 +345,8 @@
             collapseEmptyDaysByDefault: false,
             targetHoursPerMonth: DEFAULT_TARGET_HOURS,
             workTypes: clone(defaultWorkTypes()),
-            dayFields: clone(defaultDayFields())
+            dayFields: clone(defaultDayFields()),
+            collaborationRecords: defaultCollaborationRecordConfig()
           }
         };
       }
@@ -345,7 +362,8 @@
             collapseEmptyDaysByDefault: false,
             targetHoursPerMonth: DEFAULT_TARGET_HOURS,
             workTypes: clone(defaultWorkTypes()),
-            dayFields: clone(defaultDayFields())
+            dayFields: clone(defaultDayFields()),
+            collaborationRecords: defaultCollaborationRecordConfig()
           }
         };
       }
@@ -448,7 +466,8 @@
             collapseEmptyDaysByDefault: false,
             targetHoursPerMonth: DEFAULT_TARGET_HOURS,
             workTypes: clone(defaultWorkTypes()),
-            dayFields: clone(defaultDayFields())
+            dayFields: clone(defaultDayFields()),
+            collaborationRecords: defaultCollaborationRecordConfig()
           },
           profiles: [profile],
           projects: [project],
@@ -499,6 +518,23 @@
           const number = Number(value);
           return Number.isFinite(number) && number >= 0 ? Math.max(0, number) : DEFAULT_TARGET_HOURS;
         };
+        const normalizeCollaborationAttributes = (value) => {
+          if (!Array.isArray(value)) return clone(defaultCollaborationRecordAttributes());
+          return value.map((attr) => ({
+            id: attr && attr.id ? String(attr.id) : uid("collab-attr"),
+            label: (attr && (attr.label || attr.name)) || "Nowy atrybut",
+            name: (attr && (attr.name || attr.label)) || "Nowy atrybut",
+            type: "textarea",
+            defaultValue: (attr && attr.defaultValue) || ""
+          }));
+        };
+        const normalizeCollaborationConfig = (value) => {
+          const config = value && typeof value === "object" ? value : {};
+          return {
+            title: config.title || "Współpraca z osobami",
+            attributes: normalizeCollaborationAttributes(config.attributes)
+          };
+        };
         const pageInfo = source.pageInfo && typeof source.pageInfo === "object" ? source.pageInfo : defaultInfo;
         const normalizeAboutCard = (card) => {
           if (!card || typeof card !== "object") return null;
@@ -527,7 +563,8 @@
             collapseEmptyDaysByDefault: source.global && typeof source.global.collapseEmptyDaysByDefault === "boolean" ? source.global.collapseEmptyDaysByDefault : false,
             targetHoursPerMonth: parseTargetHours(source.global && source.global.targetHoursPerMonth),
             workTypes: Array.isArray(source.global && source.global.workTypes) ? source.global.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
-            dayFields: Array.isArray(source.global && source.global.dayFields) ? source.global.dayFields.map(normalizeDayField).filter(Boolean) : clone(defaultDayFields())
+            dayFields: Array.isArray(source.global && source.global.dayFields) ? source.global.dayFields.map(normalizeDayField).filter(Boolean) : clone(defaultDayFields()),
+            collaborationRecords: normalizeCollaborationConfig(source.global && source.global.collaborationRecords)
           },
           profiles: Array.isArray(source.profiles) ? source.profiles.map((profile) => ({
             id: profile.id || uid("profile"),
@@ -539,7 +576,8 @@
               collapseEmptyDaysByDefault: profile.config && typeof profile.config.collapseEmptyDaysByDefault === "boolean" ? profile.config.collapseEmptyDaysByDefault : false,
               targetHoursPerMonth: parseTargetHours(profile.config && profile.config.targetHoursPerMonth),
               workTypes: Array.isArray(profile.config && profile.config.workTypes) ? profile.config.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
-              dayFields: Array.isArray(profile.config && profile.config.dayFields) ? profile.config.dayFields.map(normalizeDayField).filter(Boolean) : clone(defaultDayFields())
+              dayFields: Array.isArray(profile.config && profile.config.dayFields) ? profile.config.dayFields.map(normalizeDayField).filter(Boolean) : clone(defaultDayFields()),
+              collaborationRecords: normalizeCollaborationConfig(profile.config && profile.config.collaborationRecords)
             }
           })) : [createProfile()],
           projects: Array.isArray(source.projects) ? source.projects.map((project) => ({
@@ -552,7 +590,8 @@
               collapseEmptyDaysByDefault: project.config && typeof project.config.collapseEmptyDaysByDefault === "boolean" ? project.config.collapseEmptyDaysByDefault : false,
               targetHoursPerMonth: parseTargetHours(project.config && project.config.targetHoursPerMonth),
               workTypes: Array.isArray(project.config && project.config.workTypes) ? project.config.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
-              dayFields: Array.isArray(project.config && project.config.dayFields) ? project.config.dayFields.map(normalizeDayField).filter(Boolean) : clone(defaultDayFields())
+              dayFields: Array.isArray(project.config && project.config.dayFields) ? project.config.dayFields.map(normalizeDayField).filter(Boolean) : clone(defaultDayFields()),
+              collaborationRecords: normalizeCollaborationConfig(project.config && project.config.collaborationRecords)
             }
           })) : [createProject()],
           defaultProfileId: source.defaultProfileId || (source.profiles && source.profiles[0] && source.profiles[0].id) || null,
@@ -657,7 +696,7 @@
       }
 
       function getEffectiveConfig() {
-        const globalCfg = db.config.global || { timeResolution: DEFAULT_RESOLUTION, workFrom: DEFAULT_WORK_FROM, workTo: DEFAULT_WORK_TO, collapseEmptyDaysByDefault: false, targetHoursPerMonth: DEFAULT_TARGET_HOURS, workTypes: clone(defaultWorkTypes()), dayFields: clone(defaultDayFields()) };
+        const globalCfg = db.config.global || { timeResolution: DEFAULT_RESOLUTION, workFrom: DEFAULT_WORK_FROM, workTo: DEFAULT_WORK_TO, collapseEmptyDaysByDefault: false, targetHoursPerMonth: DEFAULT_TARGET_HOURS, workTypes: clone(defaultWorkTypes()), dayFields: clone(defaultDayFields()), collaborationRecords: defaultCollaborationRecordConfig() };
         const profileCfg = getSelectedProfile() ? (getSelectedProfile().config || {}) : {};
         const projectCfg = getSelectedProject() ? (getSelectedProject().config || {}) : {};
 
@@ -668,7 +707,8 @@
           collapseEmptyDaysByDefault: projectCfg.collapseEmptyDaysByDefault ?? profileCfg.collapseEmptyDaysByDefault ?? globalCfg.collapseEmptyDaysByDefault ?? false,
           targetHoursPerMonth: Number(projectCfg.targetHoursPerMonth ?? profileCfg.targetHoursPerMonth ?? globalCfg.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS),
           workTypes: projectCfg.workTypes && projectCfg.workTypes.length ? projectCfg.workTypes : (profileCfg.workTypes && profileCfg.workTypes.length ? profileCfg.workTypes : (globalCfg.workTypes || clone(defaultWorkTypes()))),
-          dayFields: projectCfg.dayFields && projectCfg.dayFields.length ? projectCfg.dayFields : (profileCfg.dayFields && profileCfg.dayFields.length ? profileCfg.dayFields : (globalCfg.dayFields || clone(defaultDayFields())))
+          dayFields: projectCfg.dayFields && projectCfg.dayFields.length ? projectCfg.dayFields : (profileCfg.dayFields && profileCfg.dayFields.length ? profileCfg.dayFields : (globalCfg.dayFields || clone(defaultDayFields()))),
+          collaborationRecords: projectCfg.collaborationRecords || profileCfg.collaborationRecords || globalCfg.collaborationRecords || defaultCollaborationRecordConfig()
         };
 
         return effective;
@@ -720,6 +760,7 @@
             notes: "",
             extra: {},
             actions: [],
+            collaborationRecords: [],
             collapsed: Boolean(cfg.collapseEmptyDaysByDefault)
           };
         }
@@ -1076,6 +1117,38 @@
         }
       }
 
+      function collaborationRecordsForm(day, config) {
+        const recordConfig = config.collaborationRecords || defaultCollaborationRecordConfig();
+        const records = Array.isArray(day.collaborationRecords) ? day.collaborationRecords : [];
+        const attributes = Array.isArray(recordConfig.attributes) ? recordConfig.attributes : defaultCollaborationRecordAttributes();
+        const renderRecord = (record, index) => {
+          const fieldMarkup = attributes.map((attr) => `
+            <label>${esc(attr.label || attr.name || attr.id)}
+              <textarea data-collab-field="${index}.${attr.id}" placeholder="${esc(attr.label || attr.name || attr.id)}">${esc((record && record.attrs && record.attrs[attr.id]) || "")}</textarea>
+            </label>
+          `).join("");
+          return `
+            <div class="action" data-collab-record="${index}">
+              <div class="row2">
+                <div class="small">Rekord współpracy ${index + 1}</div>
+                <button type="button" class="danger" data-remove-collab-record>Usuń</button>
+              </div>
+              ${fieldMarkup}
+            </div>
+          `;
+        };
+
+        return `
+          <details open>
+            <summary>${esc(recordConfig.title || "Współpraca z osobami")} (${records.length})</summary>
+            <div class="actions">
+              ${records.map((record, index) => renderRecord(record, index)).join("") || '<div class="small">Brak zapisanych rekordów.</div>'}
+              <button type="button" data-add-collab-record>+ Dodaj rekord</button>
+            </div>
+          </details>
+        `;
+      }
+
       function dayForm(dateKey, day, config, collapsed = false) {
         const extraFields = (config.dayFields || []).filter((field) => !["area", "nextPlan", "risks", "notes"].includes(field.id));
         const customMarkup = extraFields.map((field) => `
@@ -1106,6 +1179,8 @@
                 <button type="button" data-add-action>+ Dodaj działanie</button>
               </div>
             </details>
+
+            ${collaborationRecordsForm(day, config)}
 
             <label>Plan dalszych działań
               <textarea data-field="nextPlan" placeholder="Co dalej?">${esc(day.nextPlan || getFieldValue(day, "nextPlan"))}</textarea>
@@ -1205,6 +1280,49 @@
               render();
             });
           }
+
+          const addCollabButton = dayEl.querySelector("[data-add-collab-record]");
+          if (addCollabButton) {
+            addCollabButton.addEventListener("click", () => {
+              const day = ensureDay(dateKey);
+              const config = getEffectiveConfig();
+              const attrs = {};
+              (config.collaborationRecords && config.collaborationRecords.attributes || defaultCollaborationRecordAttributes()).forEach((attr) => {
+                attrs[attr.id] = attr.defaultValue || "";
+              });
+              day.collaborationRecords = day.collaborationRecords || [];
+              day.collaborationRecords.push({ attrs });
+              day.collapsed = false;
+              saveDb();
+              render();
+            });
+          }
+
+          dayEl.querySelectorAll("[data-collab-record]").forEach((recEl) => {
+            const recordIndex = Number(recEl.dataset.collabRecord);
+            recEl.querySelectorAll("[data-collab-field]").forEach((input) => {
+              input.addEventListener("input", () => {
+                const day = ensureDay(dateKey);
+                const [index, attrId] = input.dataset.collabField.split(".");
+                const record = day.collaborationRecords[Number(index)];
+                if (!record) return;
+                record.attrs = record.attrs || {};
+                record.attrs[attrId] = input.value;
+                day.collapsed = false;
+                saveDb();
+              });
+            });
+
+            const removeButton = recEl.querySelector("[data-remove-collab-record]");
+            if (removeButton) {
+              removeButton.addEventListener("click", () => {
+                const day = ensureDay(dateKey);
+                day.collaborationRecords = (day.collaborationRecords || []).filter((_, idx) => idx !== recordIndex);
+                saveDb();
+                render();
+              });
+            }
+          });
 
           dayEl.querySelectorAll(".action").forEach((actionEl) => {
             const index = Number(actionEl.dataset.action);
@@ -1506,6 +1624,23 @@
         `;
       }
 
+      function renderCollaborationAttributeEditor(attr) {
+        return `
+          <div class="action" data-collab-attr-id="${attr.id}" style="padding:8px;">
+            <div class="row2">
+              <label>Nazwa pola rekordu
+                <input type="text" data-collab-attr-name value="${esc(attr.label || attr.name || attr.id)}">
+              </label>
+              <button type="button" class="danger" data-remove-collab-attr>Usuń</button>
+            </div>
+            <label>Domyślna wartość
+              <textarea data-collab-attr-default>${esc(attr.defaultValue || "")}</textarea>
+            </label>
+            <div class="small">Typ: textarea</div>
+          </div>
+        `;
+      }
+
       function renderDayFieldEditor(field) {
         return `
           <div class="action" data-day-field-id="${field.id}" style="padding:8px;">
@@ -1567,6 +1702,15 @@
             </div>
             <button type="button" data-add-day-field>+ Dodaj pole dnia</button>
 
+            <div class="small" style="margin-top:12px;">Atrybuty rekordu współpracy</div>
+            <label style="margin-top:8px;">Tytuł sekcji
+              <input type="text" data-collab-record-title value="${esc((profile.config.collaborationRecords && profile.config.collaborationRecords.title) || "Współpraca z osobami")}">
+            </label>
+            <div style="display:grid;gap:8px;margin:8px 0;">
+              ${((profile.config.collaborationRecords && profile.config.collaborationRecords.attributes) || defaultCollaborationRecordAttributes()).map((attr) => renderCollaborationAttributeEditor(attr)).join("")}
+            </div>
+            <button type="button" data-add-collab-attribute>+ Dodaj atrybut rekordu</button>
+
             <button type="button" class="danger" data-remove-profile style="margin-top:12px;">Usuń profil</button>
           </article>
         `;
@@ -1618,6 +1762,15 @@
               ${dayFields.map((field) => renderDayFieldEditor(field)).join("")}
             </div>
             <button type="button" data-add-day-field>+ Dodaj pole dnia</button>
+
+            <div class="small" style="margin-top:12px;">Atrybuty rekordu współpracy</div>
+            <label style="margin-top:8px;">Tytuł sekcji
+              <input type="text" data-collab-record-title value="${esc((project.config.collaborationRecords && project.config.collaborationRecords.title) || "Współpraca z osobami")}">
+            </label>
+            <div style="display:grid;gap:8px;margin:8px 0;">
+              ${((project.config.collaborationRecords && project.config.collaborationRecords.attributes) || defaultCollaborationRecordAttributes()).map((attr) => renderCollaborationAttributeEditor(attr)).join("")}
+            </div>
+            <button type="button" data-add-collab-attribute>+ Dodaj atrybut rekordu</button>
 
             <button type="button" class="danger" data-remove-project style="margin-top:12px;">Usuń projekt</button>
           </article>
@@ -2036,6 +2189,59 @@
             });
           }
 
+          const collabTitleInput = card.querySelector("[data-collab-record-title]");
+          if (collabTitleInput) {
+            collabTitleInput.addEventListener("input", () => {
+              profile.config.collaborationRecords = profile.config.collaborationRecords || defaultCollaborationRecordConfig();
+              profile.config.collaborationRecords.title = collabTitleInput.value || "Współpraca z osobami";
+              saveDb();
+            });
+          }
+
+          const addCollabAttrBtn = card.querySelector("[data-add-collab-attribute]");
+          if (addCollabAttrBtn) {
+            addCollabAttrBtn.addEventListener("click", () => {
+              profile.config.collaborationRecords = profile.config.collaborationRecords || defaultCollaborationRecordConfig();
+              profile.config.collaborationRecords.attributes = profile.config.collaborationRecords.attributes || defaultCollaborationRecordAttributes();
+              profile.config.collaborationRecords.attributes.push({ id: uid("collab-attr"), label: "Nowy atrybut", name: "Nowy atrybut", type: "textarea", defaultValue: "" });
+              saveDb();
+              render();
+            });
+          }
+
+          card.querySelectorAll("[data-collab-attr-id]").forEach((attrCard) => {
+            const attr = (profile.config.collaborationRecords && profile.config.collaborationRecords.attributes || []).find((item) => item.id === attrCard.dataset.collabAttrId);
+            if (!attr) return;
+
+            const nameInput = attrCard.querySelector("[data-collab-attr-name]");
+            if (nameInput) {
+              nameInput.addEventListener("input", () => {
+                attr.label = nameInput.value || "Nowy atrybut";
+                attr.name = nameInput.value || "Nowy atrybut";
+                saveDb();
+              });
+            }
+
+            const defaultValueInput = attrCard.querySelector("[data-collab-attr-default]");
+            if (defaultValueInput) {
+              defaultValueInput.addEventListener("input", () => {
+                attr.defaultValue = defaultValueInput.value;
+                saveDb();
+              });
+            }
+
+            const removeButton = attrCard.querySelector("[data-remove-collab-attr]");
+            if (removeButton) {
+              removeButton.addEventListener("click", () => {
+                profile.config.collaborationRecords = profile.config.collaborationRecords || defaultCollaborationRecordConfig();
+                profile.config.collaborationRecords.attributes = (profile.config.collaborationRecords.attributes || []).filter((item) => item.id !== attr.id);
+                if (!profile.config.collaborationRecords.attributes.length) profile.config.collaborationRecords.attributes = defaultCollaborationRecordAttributes();
+                saveDb();
+                render();
+              });
+            }
+          });
+
           card.querySelectorAll("[data-work-type-id]").forEach((typeCard) => {
             const type = (profile.config.workTypes || []).find((item) => item.id === typeCard.dataset.workTypeId);
             if (!type) return;
@@ -2262,6 +2468,59 @@
               render();
             });
           }
+
+          const collabTitleInput = card.querySelector("[data-collab-record-title]");
+          if (collabTitleInput) {
+            collabTitleInput.addEventListener("input", () => {
+              project.config.collaborationRecords = project.config.collaborationRecords || defaultCollaborationRecordConfig();
+              project.config.collaborationRecords.title = collabTitleInput.value || "Współpraca z osobami";
+              saveDb();
+            });
+          }
+
+          const addCollabAttrBtn = card.querySelector("[data-add-collab-attribute]");
+          if (addCollabAttrBtn) {
+            addCollabAttrBtn.addEventListener("click", () => {
+              project.config.collaborationRecords = project.config.collaborationRecords || defaultCollaborationRecordConfig();
+              project.config.collaborationRecords.attributes = project.config.collaborationRecords.attributes || defaultCollaborationRecordAttributes();
+              project.config.collaborationRecords.attributes.push({ id: uid("collab-attr"), label: "Nowy atrybut", name: "Nowy atrybut", type: "textarea", defaultValue: "" });
+              saveDb();
+              render();
+            });
+          }
+
+          card.querySelectorAll("[data-collab-attr-id]").forEach((attrCard) => {
+            const attr = (project.config.collaborationRecords && project.config.collaborationRecords.attributes || []).find((item) => item.id === attrCard.dataset.collabAttrId);
+            if (!attr) return;
+
+            const nameInput = attrCard.querySelector("[data-collab-attr-name]");
+            if (nameInput) {
+              nameInput.addEventListener("input", () => {
+                attr.label = nameInput.value || "Nowy atrybut";
+                attr.name = nameInput.value || "Nowy atrybut";
+                saveDb();
+              });
+            }
+
+            const defaultValueInput = attrCard.querySelector("[data-collab-attr-default]");
+            if (defaultValueInput) {
+              defaultValueInput.addEventListener("input", () => {
+                attr.defaultValue = defaultValueInput.value;
+                saveDb();
+              });
+            }
+
+            const removeButton = attrCard.querySelector("[data-remove-collab-attr]");
+            if (removeButton) {
+              removeButton.addEventListener("click", () => {
+                project.config.collaborationRecords = project.config.collaborationRecords || defaultCollaborationRecordConfig();
+                project.config.collaborationRecords.attributes = (project.config.collaborationRecords.attributes || []).filter((item) => item.id !== attr.id);
+                if (!project.config.collaborationRecords.attributes.length) project.config.collaborationRecords.attributes = defaultCollaborationRecordAttributes();
+                saveDb();
+                render();
+              });
+            }
+          });
 
           card.querySelectorAll("[data-work-type-id]").forEach((typeCard) => {
             const type = (project.config.workTypes || []).find((item) => item.id === typeCard.dataset.workTypeId);
