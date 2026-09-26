@@ -81,6 +81,20 @@
     .limit-over #totalHours { color: var(--danger); }
     .hidden { display: none !important; }
     .footer-note { font-size: .84rem; color: var(--muted); padding: 4px 0; }
+    .modal {
+      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.42); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 20;
+    }
+    .modal.hidden { display: none; }
+    .modal-panel {
+      width: min(560px, 100%); background: white; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16); padding: 18px; display: grid; gap: 14px;
+    }
+    .modal-head { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .weekday-grid { display: grid; grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 8px; }
+    .weekday-grid label {
+      display: flex; align-items: center; gap: 8px; font-size: .86rem; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: #f8fafc;
+    }
+    .weekday-grid input { width: auto; margin: 0; }
     @media (max-width:1100px){ .week { grid-template-columns: repeat(2,minmax(0,1fr)); } }
     @media (max-width:700px){
       header { position: static; }
@@ -548,6 +562,133 @@
         return Object.assign({}, defaultLabels, (db.config && db.config.labels) || {});
       }
 
+      function renderBatchModal() {
+        const modal = $("#batchModal");
+        if (!modal) return;
+        const config = getEffectiveConfig();
+        const monthDates = monthGrid(currentMonth);
+        const daysInMonth = monthDates.filter((date) => date.getFullYear() === Number(currentMonth.split("-")[0]) && date.getMonth() + 1 === Number(currentMonth.split("-")[1]));
+        const weekdayNames = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Nd"];
+        const totalDays = daysInMonth.length;
+        const selected = state.batchSelectedWeekdays || [];
+
+        modal.innerHTML = `
+          <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="batchModalTitle">
+            <div class="modal-head">
+              <div>
+                <div class="small">Masowe dodawanie wpisów</div>
+                <h3 id="batchModalTitle" style="margin:4px 0 0;">Dodaj wpisy dla ${currentMonth}</h3>
+              </div>
+              <button type="button" id="closeBatchModalBtn" aria-label="Zamknij">✕</button>
+            </div>
+            <div class="row2">
+              <label>Typ wpisu pracy
+                <select id="batchWorkType">
+                  ${(config.workTypes || []).map((type) => `<option value="${esc(type.id)}">${esc(type.name)}</option>`).join("") || '<option value="">Brak typów</option>'}
+                </select>
+              </label>
+              <label>Rozdzielczość czasu
+                <select id="batchResolution">
+                  <option value="minute" ${config.timeResolution === "minute" ? "selected" : ""}>Minuty</option>
+                  <option value="30m" ${config.timeResolution === "30m" ? "selected" : ""}>30 minut</option>
+                  <option value="hour" ${config.timeResolution === "hour" ? "selected" : ""}>Godziny</option>
+                </select>
+              </label>
+            </div>
+            <div class="row2">
+              <label>Początek pracy
+                <input id="batchWorkFrom" type="time" value="${esc(config.workFrom || DEFAULT_WORK_FROM)}" step="${stepForResolution(config.timeResolution)}">
+              </label>
+              <label>Koniec pracy
+                <input id="batchWorkTo" type="time" value="${esc(config.workTo || DEFAULT_WORK_TO)}" step="${stepForResolution(config.timeResolution)}">
+              </label>
+            </div>
+            <label>Opis działania
+              <textarea id="batchDescription" placeholder="Domyślny opis pracy">${esc((config.workTypes || [])[0] ? ((config.workTypes[0].defaultValues || {}).description || "") : "")}</textarea>
+            </label>
+            <label>Uwagi do działania
+              <textarea id="batchNotes" placeholder="Domyślne uwagi">${esc((config.workTypes || [])[0] ? ((config.workTypes[0].defaultValues || {}).notes || "") : "")}</textarea>
+            </label>
+            <div>
+              <div class="small" style="margin-bottom:6px;">Dodaj wpis w dniach tygodnia</div>
+              <div class="weekday-grid">
+                ${weekdayNames.map((name, index) => `
+                  <label>
+                    <input type="checkbox" value="${index}" ${selected.includes(index) ? "checked" : ""}>
+                    <span>${name}</span>
+                  </label>
+                `).join("")}
+              </div>
+            </div>
+            <div class="small">Dni do uzupełnienia: ${Math.max(0, totalDays ? daysInMonth.filter((d) => selected.includes(d.getDay() === 0 ? 6 : d.getDay() - 1)).length : 0)}</div>
+            <div class="modal-actions">
+              <button type="button" id="cancelBatchModalBtn">Anuluj</button>
+              <button type="button" class="primary" id="applyBatchModalBtn">Dodaj wpisy</button>
+            </div>
+          </div>
+        `;
+
+        const batchType = $("#batchWorkType");
+        if (batchType) {
+          batchType.addEventListener("change", () => {
+            const type = (config.workTypes || []).find((item) => item.id === batchType.value);
+            $("#batchDescription").value = (type && type.defaultValues && type.defaultValues.description) || "";
+            $("#batchNotes").value = (type && type.defaultValues && type.defaultValues.notes) || "";
+          });
+        }
+
+        const batchResolution = $("#batchResolution");
+        if (batchResolution) {
+          batchResolution.addEventListener("change", () => {
+            const step = stepForResolution(batchResolution.value);
+            $("#batchWorkFrom").step = step;
+            $("#batchWorkTo").step = step;
+            $("#batchWorkFrom").value = roundTime($("#batchWorkFrom").value || config.workFrom || DEFAULT_WORK_FROM, batchResolution.value);
+            $("#batchWorkTo").value = roundTime($("#batchWorkTo").value || config.workTo || DEFAULT_WORK_TO, batchResolution.value);
+          });
+        }
+
+        const weekdays = modal.querySelectorAll('input[type="checkbox"]');
+        weekdays.forEach((check) => {
+          check.addEventListener("change", () => {
+            const values = Array.from(modal.querySelectorAll('input[type="checkbox"]:checked')).map((input) => Number(input.value));
+            state.batchSelectedWeekdays = values;
+          });
+        });
+
+        const close = () => { modal.classList.add("hidden"); };
+        $("#closeBatchModalBtn").addEventListener("click", close);
+        $("#cancelBatchModalBtn").addEventListener("click", close);
+        $("#applyBatchModalBtn").addEventListener("click", () => {
+          const selectedDays = monthDates.filter((date) => date.getFullYear() === Number(currentMonth.split("-")[0]) && date.getMonth() + 1 === Number(currentMonth.split("-")[1]) && (state.batchSelectedWeekdays || []).includes(date.getDay() === 0 ? 6 : date.getDay() - 1));
+          const workType = $("#batchWorkType").value;
+          const defaults = (config.workTypes || []).find((item) => item.id === workType) || (config.workTypes || [])[0] || { defaultValues: { description: "", notes: "", attrs: {} }, attributes: [] };
+          const actionDefaults = buildActionDefaults(workType || defaults.id, config.workTypes || []);
+          const from = $("#batchWorkFrom").value || config.workFrom || DEFAULT_WORK_FROM;
+          const to = $("#batchWorkTo").value || config.workTo || DEFAULT_WORK_TO;
+          const description = $("#batchDescription").value || actionDefaults.description;
+          const notes = $("#batchNotes").value || actionDefaults.notes;
+          const attrs = { ...(actionDefaults.attrs || {}) };
+
+          selectedDays.forEach((date) => {
+            const key = iso(date);
+            const day = ensureDay(key);
+            day.actions.push({
+              workType: workType || defaults.id || "",
+              from: roundTime(from, config.timeResolution),
+              to: roundTime(to, config.timeResolution),
+              description,
+              notes,
+              attrs
+            });
+          });
+
+          saveDb();
+          close();
+          render();
+        });
+      }
+
       function render() {
         if (state.configOpen) {
           renderConfigPage();
@@ -557,7 +698,16 @@
         const labels = getLabels();
         const calendar = $("#calendar");
         calendar.className = "wrap weeks";
-        calendar.innerHTML = "";
+        calendar.innerHTML = `
+          <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+            <button type="button" id="batchAddBtn" class="primary">+ Dodaj wpisy na każdy dzień miesiąca</button>
+          </div>
+        `;
+
+        const batchPlaceholder = document.createElement("div");
+        batchPlaceholder.id = "batchModal";
+        batchPlaceholder.className = "modal hidden";
+        calendar.appendChild(batchPlaceholder);
 
         const days = monthGrid(currentMonth);
         const [year, month] = currentMonth.split("-").map(Number);
@@ -598,6 +748,16 @@
 
         bindMainControls();
         updateStats();
+        const batchBtn = $("#batchAddBtn");
+        if (batchBtn) {
+          batchBtn.addEventListener("click", () => {
+            const modal = $("#batchModal");
+            if (!modal) return;
+            state.batchSelectedWeekdays = state.batchSelectedWeekdays || [0,1,2,3,4];
+            renderBatchModal();
+            modal.classList.remove("hidden");
+          });
+        }
       }
 
       function dayForm(dateKey, day, config) {
