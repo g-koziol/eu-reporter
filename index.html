@@ -63,10 +63,20 @@
     .week { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 10px; margin-bottom: 10px; }
     .day { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-width: 0; }
     .day.off { opacity: .45; }
+    .day.is-focused { border-color: rgba(37, 99, 235, 0.5); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08); }
     .day-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); background: #fbfcfe; }
     .day-title { font-weight: 700; }
     .day-total { font-size: .9rem; color: var(--muted); }
     .day-body { padding: 10px; display: grid; gap: 8px; }
+    .day.is-collapsed .day-body { display: none; }
+    .day-toggle { border: 1px solid var(--line); background: white; border-radius: 999px; padding: 4px 8px; cursor: pointer; font-size: .8rem; }
+    .day-nav { position: sticky; top: 108px; z-index: 8; margin-bottom: 12px; padding: 10px 0; background: rgba(246,247,251,.96); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+    .day-nav-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(72px, 1fr); gap: 8px; overflow-x: auto; scrollbar-width: thin; }
+    .day-pill { appearance: none; border: 1px solid var(--line); background: white; color: var(--text); border-radius: 10px; padding: 8px 10px; text-align: center; cursor: pointer; display: grid; gap: 4px; }
+    .day-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .day-pill .day-pill-week { font-size: .72rem; opacity: 0.8; }
+    .day-pill .day-pill-total { font-size: .72rem; font-weight: 700; }
+    .day-pill.today { border-style: dashed; }
     .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     label { font-size: .82rem; color: var(--muted); display: grid; gap: 4px; }
     details { border: 1px solid var(--line); border-radius: 9px; background: #fff; }
@@ -220,6 +230,7 @@
             timeResolution: DEFAULT_RESOLUTION,
             workFrom: DEFAULT_WORK_FROM,
             workTo: DEFAULT_WORK_TO,
+            collapseEmptyDaysByDefault: false,
             workTypes: clone(defaultWorkTypes()),
             dayFields: clone(defaultDayFields())
           }
@@ -234,6 +245,7 @@
             timeResolution: DEFAULT_RESOLUTION,
             workFrom: DEFAULT_WORK_FROM,
             workTo: DEFAULT_WORK_TO,
+            collapseEmptyDaysByDefault: false,
             workTypes: clone(defaultWorkTypes()),
             dayFields: clone(defaultDayFields())
           }
@@ -295,6 +307,7 @@
             timeResolution: DEFAULT_RESOLUTION,
             workFrom: DEFAULT_WORK_FROM,
             workTo: DEFAULT_WORK_TO,
+            collapseEmptyDaysByDefault: false,
             workTypes: clone(defaultWorkTypes()),
             dayFields: clone(defaultDayFields())
           },
@@ -346,6 +359,7 @@
             timeResolution: source.global && source.global.timeResolution ? source.global.timeResolution : DEFAULT_RESOLUTION,
             workFrom: source.global && source.global.workFrom ? source.global.workFrom : DEFAULT_WORK_FROM,
             workTo: source.global && source.global.workTo ? source.global.workTo : DEFAULT_WORK_TO,
+            collapseEmptyDaysByDefault: source.global && typeof source.global.collapseEmptyDaysByDefault === "boolean" ? source.global.collapseEmptyDaysByDefault : false,
             workTypes: Array.isArray(source.global && source.global.workTypes) ? source.global.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
             dayFields: Array.isArray(source.global && source.global.dayFields) ? source.global.dayFields.map(normalizeDayField).filter(Boolean) : clone(defaultDayFields())
           },
@@ -356,6 +370,7 @@
               timeResolution: profile.config && profile.config.timeResolution ? profile.config.timeResolution : DEFAULT_RESOLUTION,
               workFrom: profile.config && profile.config.workFrom ? profile.config.workFrom : DEFAULT_WORK_FROM,
               workTo: profile.config && profile.config.workTo ? profile.config.workTo : DEFAULT_WORK_TO,
+              collapseEmptyDaysByDefault: profile.config && typeof profile.config.collapseEmptyDaysByDefault === "boolean" ? profile.config.collapseEmptyDaysByDefault : false,
               workTypes: Array.isArray(profile.config && profile.config.workTypes) ? profile.config.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
               dayFields: Array.isArray(profile.config && profile.config.dayFields) ? profile.config.dayFields.map(normalizeDayField).filter(Boolean) : clone(defaultDayFields())
             }
@@ -367,6 +382,7 @@
               timeResolution: project.config && project.config.timeResolution ? project.config.timeResolution : DEFAULT_RESOLUTION,
               workFrom: project.config && project.config.workFrom ? project.config.workFrom : DEFAULT_WORK_FROM,
               workTo: project.config && project.config.workTo ? project.config.workTo : DEFAULT_WORK_TO,
+              collapseEmptyDaysByDefault: project.config && typeof project.config.collapseEmptyDaysByDefault === "boolean" ? project.config.collapseEmptyDaysByDefault : false,
               workTypes: Array.isArray(project.config && project.config.workTypes) ? project.config.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
               dayFields: Array.isArray(project.config && project.config.dayFields) ? project.config.dayFields.map(normalizeDayField).filter(Boolean) : clone(defaultDayFields())
             }
@@ -472,7 +488,7 @@
       }
 
       function getEffectiveConfig() {
-        const globalCfg = db.config.global || { timeResolution: DEFAULT_RESOLUTION, workFrom: DEFAULT_WORK_FROM, workTo: DEFAULT_WORK_TO, workTypes: clone(defaultWorkTypes()), dayFields: clone(defaultDayFields()) };
+        const globalCfg = db.config.global || { timeResolution: DEFAULT_RESOLUTION, workFrom: DEFAULT_WORK_FROM, workTo: DEFAULT_WORK_TO, collapseEmptyDaysByDefault: false, workTypes: clone(defaultWorkTypes()), dayFields: clone(defaultDayFields()) };
         const profileCfg = getSelectedProfile() ? (getSelectedProfile().config || {}) : {};
         const projectCfg = getSelectedProject() ? (getSelectedProject().config || {}) : {};
 
@@ -480,6 +496,7 @@
           timeResolution: normalizeResolution(projectCfg.timeResolution || profileCfg.timeResolution || globalCfg.timeResolution || DEFAULT_RESOLUTION),
           workFrom: projectCfg.workFrom || profileCfg.workFrom || globalCfg.workFrom || DEFAULT_WORK_FROM,
           workTo: projectCfg.workTo || profileCfg.workTo || globalCfg.workTo || DEFAULT_WORK_TO,
+          collapseEmptyDaysByDefault: projectCfg.collapseEmptyDaysByDefault ?? profileCfg.collapseEmptyDaysByDefault ?? globalCfg.collapseEmptyDaysByDefault ?? false,
           workTypes: projectCfg.workTypes && projectCfg.workTypes.length ? projectCfg.workTypes : (profileCfg.workTypes && profileCfg.workTypes.length ? profileCfg.workTypes : (globalCfg.workTypes || clone(defaultWorkTypes()))),
           dayFields: projectCfg.dayFields && projectCfg.dayFields.length ? projectCfg.dayFields : (profileCfg.dayFields && profileCfg.dayFields.length ? profileCfg.dayFields : (globalCfg.dayFields || clone(defaultDayFields())))
         };
@@ -526,11 +543,13 @@
             risks: "",
             notes: "",
             extra: {},
-            actions: []
+            actions: [],
+            collapsed: Boolean(cfg.collapseEmptyDaysByDefault)
           };
         }
         if (!bucket.days[date].workFrom) bucket.days[date].workFrom = cfg.workFrom || DEFAULT_WORK_FROM;
         if (!bucket.days[date].workTo) bucket.days[date].workTo = cfg.workTo || DEFAULT_WORK_TO;
+        if (bucket.days[date].collapsed === undefined) bucket.days[date].collapsed = Boolean(cfg.collapseEmptyDaysByDefault);
         const fields = cfg.dayFields || [];
         fields.forEach((field) => {
           if (!field || !field.id) return;
@@ -695,10 +714,22 @@
           return;
         }
 
+        const monthDates = monthGrid(currentMonth);
+        const [year, month] = currentMonth.split("-").map(Number);
+        const monthList = monthDates.filter((dateObj) => dateObj.getFullYear() === year && dateObj.getMonth() + 1 === month);
+        if (!state.activeDay || !monthList.some((dateObj) => iso(dateObj) === state.activeDay)) {
+          const todayKey = iso(new Date());
+          const fallback = monthList.find((dateObj) => iso(dateObj) === todayKey) || monthList[0] || null;
+          state.activeDay = fallback ? iso(fallback) : null;
+        }
+
         const labels = getLabels();
         const calendar = $("#calendar");
         calendar.className = "wrap weeks";
         calendar.innerHTML = `
+          <div class="day-nav">
+            <div class="day-nav-strip" id="dayNavStrip"></div>
+          </div>
           <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
             <button type="button" id="batchAddBtn" class="primary">+ Dodaj wpisy na każdy dzień miesiąca</button>
           </div>
@@ -710,7 +741,6 @@
         calendar.appendChild(batchPlaceholder);
 
         const days = monthGrid(currentMonth);
-        const [year, month] = currentMonth.split("-").map(Number);
         const names = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Nd"];
         $("#appTitle").textContent = labels.title;
         $("#monthLabelText").textContent = labels.month;
@@ -722,6 +752,40 @@
         $("#clearBtn").textContent = labels.clearMonth;
         const cfg = getEffectiveConfig();
 
+        const navStrip = $("#dayNavStrip");
+        if (navStrip) {
+          navStrip.innerHTML = monthDays.map((dateObj) => {
+            const key = iso(dateObj);
+            const day = ensureDay(key);
+            const total = (day.actions || []).reduce((sum, action) => sum + actionMinutes(action), 0);
+            const weekName = names[(dateObj.getDay() + 6) % 7];
+            const isToday = key === iso(new Date());
+            const isEmpty = !(day.actions || []).length && !day.area && !day.nextPlan && !day.risks && !day.notes && !Object.keys(day.extra || {}).length && !day.workFrom && !day.workTo;
+            return `
+              <button type="button" class="day-pill ${isToday ? "today" : ""} ${state.activeDay === key ? "active" : ""}" data-day-nav="${key}" title="${key}">
+                <span class="day-pill-week">${weekName}</span>
+                <span>${pad(dateObj.getDate())}</span>
+                <span class="day-pill-total">${isEmpty ? "-" : fmtMin(total)}</span>
+              </button>
+            `;
+          }).join("");
+
+          navStrip.querySelectorAll("[data-day-nav]").forEach((button) => {
+            button.addEventListener("click", () => {
+              const key = button.dataset.dayNav;
+              state.activeDay = key;
+              document.querySelectorAll(".day").forEach((dayCard) => {
+                dayCard.classList.toggle("is-focused", dayCard.dataset.date === key);
+              });
+              const target = document.querySelector(`.day[data-date="${key}"]`);
+              if (target) {
+                target.scrollIntoView({ behavior: "smooth", block: "center" });
+              }
+              render();
+            });
+          });
+        }
+
         for (let i = 0; i < days.length; i += 7) {
           const week = document.createElement("section");
           week.className = "week";
@@ -731,15 +795,20 @@
             const dateKey = iso(dateObj);
             const day = inMonth ? ensureDay(dateKey) : null;
             const total = inMonth ? (day.actions || []).reduce((sum, action) => sum + actionMinutes(action), 0) : 0;
-
+            const isEmpty = inMonth && !(day.actions || []).length && !day.area && !day.nextPlan && !day.risks && !day.notes && !Object.keys(day.extra || {}).length;
+            const isCollapsed = !!(inMonth && day && day.collapsed !== undefined ? day.collapsed : (cfg.collapseEmptyDaysByDefault && isEmpty));
             const article = document.createElement("article");
-            article.className = "day" + (inMonth ? "" : " off");
+            article.className = "day" + (inMonth ? "" : " off") + (inMonth && state.activeDay === dateKey ? " is-focused" : "") + (isCollapsed ? " is-collapsed" : "");
+            article.dataset.date = dateKey;
             article.innerHTML = `
               <div class="day-head">
                 <div class="day-title">${names[idx]} ${pad(dateObj.getDate())}.${pad(dateObj.getMonth() + 1)}</div>
-                <div class="day-total">${fmtMin(total)}</div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div class="day-total">${fmtMin(total)}</div>
+                  ${inMonth ? `<button type="button" class="day-toggle" data-day-toggle="${dateKey}">${isCollapsed ? "Pokaż" : "Ukryj"}</button>` : ""}
+                </div>
               </div>
-              ${inMonth ? dayForm(dateKey, day, cfg) : '<div class="day-body small">Poza wybranym miesiącem</div>'}
+              ${inMonth ? dayForm(dateKey, day, cfg, isCollapsed) : '<div class="day-body small">Poza wybranym miesiącem</div>'}
             `;
             week.appendChild(article);
           });
@@ -760,7 +829,7 @@
         }
       }
 
-      function dayForm(dateKey, day, config) {
+      function dayForm(dateKey, day, config, collapsed = false) {
         const extraFields = (config.dayFields || []).filter((field) => !["area", "nextPlan", "risks", "notes"].includes(field.id));
         const customMarkup = extraFields.map((field) => `
           <label>${field.label || field.id}
@@ -769,7 +838,7 @@
         `).join("");
 
         return `
-          <div class="day-body" data-date="${dateKey}">
+          <div class="day-body" data-date="${dateKey}" ${collapsed ? 'style="display:none;"' : ""}>
             <div class="row2">
               <label>Zakres dnia od
                 <input type="time" data-field="workFrom" value="${esc(day.workFrom || "")}" step="${stepForResolution(config.timeResolution)}">
@@ -861,7 +930,9 @@
               } else {
                 setDayField(day, field, input.value);
               }
+              day.collapsed = false;
               saveDb();
+              render();
             });
           });
 
@@ -869,7 +940,9 @@
             input.addEventListener("input", () => {
               const day = ensureDay(dateKey);
               setDayField(day, input.dataset.dayField, input.value);
+              day.collapsed = false;
               saveDb();
+              render();
             });
           });
 
@@ -880,6 +953,7 @@
               const type = (getEffectiveConfig().workTypes || [])[0];
               const newAction = type ? buildActionDefaults(type.id, getEffectiveConfig().workTypes) : { workType: "", from: "", to: "", description: "", notes: "", attrs: {} };
               day.actions.push(newAction);
+              day.collapsed = false;
               saveDb();
               render();
             });
@@ -918,6 +992,7 @@
                 duration.textContent = fmtMin(actionMinutes(action));
                 const totalMinutes = (day.actions || []).reduce((sum, item) => sum + actionMinutes(item), 0);
                 dayEl.closest(".day").querySelector(".day-total").textContent = fmtMin(totalMinutes);
+                day.collapsed = false;
                 saveDb();
                 updateStats();
               });
@@ -928,10 +1003,21 @@
               removeButton.addEventListener("click", () => {
                 const day = ensureDay(dateKey);
                 day.actions.splice(index, 1);
+                day.collapsed = false;
                 saveDb();
                 render();
               });
             }
+          });
+        });
+
+        document.querySelectorAll("[data-day-toggle]").forEach((toggle) => {
+          toggle.addEventListener("click", () => {
+            const dateKey = toggle.dataset.dayToggle;
+            const day = ensureDay(dateKey);
+            day.collapsed = !Boolean(day.collapsed);
+            saveDb();
+            render();
           });
         });
       }
@@ -1037,6 +1123,10 @@
                 <input type="time" data-profile-work-to value="${esc(profile.config.workTo || DEFAULT_WORK_TO)}" step="${stepForResolution(profile.config.timeResolution || DEFAULT_RESOLUTION)}">
               </label>
             </div>
+            <label style="margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+              <input type="checkbox" data-profile-collapse-empty-days ${profile.config.collapseEmptyDaysByDefault ? "checked" : ""}>
+              <span>Zwijaj puste dni domyślnie</span>
+            </label>
 
             <div class="small">Typy wpisów pracy</div>
             <div style="display:grid;gap:8px;margin:8px 0;">
@@ -1080,6 +1170,10 @@
                 <input type="time" data-project-work-to value="${esc(project.config.workTo || DEFAULT_WORK_TO)}" step="${stepForResolution(project.config.timeResolution || DEFAULT_RESOLUTION)}">
               </label>
             </div>
+            <label style="margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+              <input type="checkbox" data-project-collapse-empty-days ${project.config.collapseEmptyDaysByDefault ? "checked" : ""}>
+              <span>Zwijaj puste dni domyślnie</span>
+            </label>
 
             <div class="small">Typy wpisów pracy</div>
             <div style="display:grid;gap:8px;margin:8px 0;">
@@ -1148,6 +1242,10 @@
                   </div>
                 </label>
               </div>
+              <label style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+                <input id="globalCollapseEmptyDays" type="checkbox" ${globalCfg.collapseEmptyDaysByDefault ? "checked" : ""}>
+                <span>Zwijaj puste dni automatycznie</span>
+              </label>
               <div class="small">Konfiguracja jest wersjonowana. Obecna wersja: ${config.version || DEFAULT_VERSION}</div>
             </section>
 
@@ -1230,6 +1328,12 @@
           saveDb();
         });
 
+        $("#globalCollapseEmptyDays").addEventListener("change", (event) => {
+          db.config.global.collapseEmptyDaysByDefault = Boolean(event.target.checked);
+          saveDb();
+          render();
+        });
+
         $("#addProfileBtn").addEventListener("click", () => {
           const profile = createProfile(`Nowy profil ${db.config.profiles.length + 1}`);
           db.config.profiles.push(profile);
@@ -1304,6 +1408,15 @@
               workToInput.value = value;
               profile.config.workTo = value || DEFAULT_WORK_TO;
               saveDb();
+            });
+          }
+
+          const collapseInput = card.querySelector("[data-profile-collapse-empty-days]");
+          if (collapseInput) {
+            collapseInput.addEventListener("change", () => {
+              profile.config.collapseEmptyDaysByDefault = Boolean(collapseInput.checked);
+              saveDb();
+              render();
             });
           }
 
@@ -1497,6 +1610,15 @@
             });
           }
 
+          const collapseInput = card.querySelector("[data-project-collapse-empty-days]");
+          if (collapseInput) {
+            collapseInput.addEventListener("change", () => {
+              project.config.collapseEmptyDaysByDefault = Boolean(collapseInput.checked);
+              saveDb();
+              render();
+            });
+          }
+
           const removeButton = card.querySelector("[data-remove-project]");
           if (removeButton) {
             removeButton.addEventListener("click", () => {
@@ -1641,7 +1763,8 @@
       const state = {
         selectedProfileId: null,
         selectedProjectId: null,
-        configOpen: false
+        configOpen: false,
+        activeDay: null
       };
 
       let currentMonth = ym(new Date());
