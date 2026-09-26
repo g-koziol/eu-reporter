@@ -102,6 +102,7 @@
     .day-pill .day-pill-total { font-size: .72rem; font-weight: 700; }
     .day-pill.today { border-style: dashed; }
     .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .day-range-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     label { font-size: .82rem; color: var(--muted); display: grid; gap: 4px; }
     details { border: 1px solid var(--line); border-radius: 9px; background: #fff; }
     summary { padding: 9px; cursor: pointer; font-weight: 600; }
@@ -190,6 +191,7 @@
       .week { grid-template-columns: 1fr; }
       .stats { grid-template-columns: 1fr; }
       .action-top, .row2 { grid-template-columns: 1fr; }
+      .day-range-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
   </style>
 </head>
@@ -1159,7 +1161,7 @@
 
         return `
           <div class="day-body" data-date="${dateKey}" ${collapsed ? 'style="display:none;"' : ""}>
-            <div class="row2">
+            <div class="day-range-row">
               <label>Zakres dnia od
                 <input type="time" data-field="workFrom" value="${esc(day.workFrom || "")}" step="${stepForResolution(config.timeResolution)}">
               </label>
@@ -1167,10 +1169,6 @@
                 <input type="time" data-field="workTo" value="${esc(day.workTo || "")}" step="${stepForResolution(config.timeResolution)}">
               </label>
             </div>
-
-            <label>Obszar działania
-              <textarea data-field="area" placeholder="Ogólny obszar działań w tym dniu">${esc(day.area || getFieldValue(day, "area"))}</textarea>
-            </label>
 
             <details open>
               <summary>Działania w ciągu dnia (${(day.actions || []).length})</summary>
@@ -1182,19 +1180,39 @@
 
             ${collaborationRecordsForm(day, config)}
 
-            <label>Plan dalszych działań
-              <textarea data-field="nextPlan" placeholder="Co dalej?">${esc(day.nextPlan || getFieldValue(day, "nextPlan"))}</textarea>
-            </label>
-
-            <label>Trudności / ryzyka
-              <textarea data-field="risks" placeholder="Problemy, ryzyka, bariery">${esc(day.risks || getFieldValue(day, "risks"))}</textarea>
-            </label>
-
-            <label>Uwagi do dnia
-              <textarea data-field="notes" placeholder="Dodatkowe uwagi">${esc(day.notes || getFieldValue(day, "notes"))}</textarea>
-            </label>
-
-            ${customMarkup}
+            ${customMarkup ? `
+              <details>
+                <summary>Dodatkowe pola dnia (${(config.dayFields || []).filter((field) => !["area", "nextPlan", "risks", "notes"].includes(field.id)).length})</summary>
+                <div class="actions">
+                  <label>Obszar działania
+                    <textarea data-field="area" placeholder="Ogólny obszar działań w tym dniu">${esc(day.area || getFieldValue(day, "area"))}</textarea>
+                  </label>
+                  <label>Plan dalszych działań
+                    <textarea data-field="nextPlan" placeholder="Co dalej?">${esc(day.nextPlan || getFieldValue(day, "nextPlan"))}</textarea>
+                  </label>
+                  <label>Trudności / ryzyka
+                    <textarea data-field="risks" placeholder="Problemy, ryzyka, bariery">${esc(day.risks || getFieldValue(day, "risks"))}</textarea>
+                  </label>
+                  <label>Uwagi do dnia
+                    <textarea data-field="notes" placeholder="Dodatkowe uwagi">${esc(day.notes || getFieldValue(day, "notes"))}</textarea>
+                  </label>
+                  ${customMarkup}
+                </div>
+              </details>
+            ` : `
+              <label>Obszar działania
+                <textarea data-field="area" placeholder="Ogólny obszar działań w tym dniu">${esc(day.area || getFieldValue(day, "area"))}</textarea>
+              </label>
+              <label>Plan dalszych działań
+                <textarea data-field="nextPlan" placeholder="Co dalej?">${esc(day.nextPlan || getFieldValue(day, "nextPlan"))}</textarea>
+              </label>
+              <label>Trudności / ryzyka
+                <textarea data-field="risks" placeholder="Problemy, ryzyka, bariery">${esc(day.risks || getFieldValue(day, "risks"))}</textarea>
+              </label>
+              <label>Uwagi do dnia
+                <textarea data-field="notes" placeholder="Dodatkowe uwagi">${esc(day.notes || getFieldValue(day, "notes"))}</textarea>
+              </label>
+            `}
           </div>
         `;
       }
