@@ -46,6 +46,8 @@
           "defaultValues": {
             "description": "Współpraca z OPS",
             "notes": "",
+            "from": "09:00",
+            "to": "10:30",
             "attrs": {}
           },
           "attributes": []
