@@ -754,7 +754,7 @@
 
         const navStrip = $("#dayNavStrip");
         if (navStrip) {
-          navStrip.innerHTML = monthDays.map((dateObj) => {
+          navStrip.innerHTML = monthList.map((dateObj) => {
             const key = iso(dateObj);
             const day = ensureDay(key);
             const total = (day.actions || []).reduce((sum, action) => sum + actionMinutes(action), 0);
