@@ -156,7 +156,7 @@
 
   <script>
     (() => {
-      const LIMIT_MIN = 100 * 60;
+      const DEFAULT_TARGET_HOURS = 100;
       const STORAGE_KEY = "ewidencjaProjektowa_v1";
       const DEFAULT_RESOLUTION = "minute";
       const DEFAULT_WORK_FROM = "09:00";
@@ -236,6 +236,7 @@
             workFrom: DEFAULT_WORK_FROM,
             workTo: DEFAULT_WORK_TO,
             collapseEmptyDaysByDefault: false,
+            targetHoursPerMonth: DEFAULT_TARGET_HOURS,
             workTypes: clone(defaultWorkTypes()),
             dayFields: clone(defaultDayFields())
           }
@@ -251,6 +252,7 @@
             workFrom: DEFAULT_WORK_FROM,
             workTo: DEFAULT_WORK_TO,
             collapseEmptyDaysByDefault: false,
+            targetHoursPerMonth: DEFAULT_TARGET_HOURS,
             workTypes: clone(defaultWorkTypes()),
             dayFields: clone(defaultDayFields())
           }
@@ -313,6 +315,7 @@
             workFrom: DEFAULT_WORK_FROM,
             workTo: DEFAULT_WORK_TO,
             collapseEmptyDaysByDefault: false,
+            targetHoursPerMonth: DEFAULT_TARGET_HOURS,
             workTypes: clone(defaultWorkTypes()),
             dayFields: clone(defaultDayFields())
           },
@@ -357,6 +360,10 @@
       function normalizeConfig(raw) {
         const source = raw && typeof raw === "object" ? raw : createDefaultConfig();
         const defaultLabels = createDefaultLabels();
+        const parseTargetHours = (value) => {
+          const number = Number(value);
+          return Number.isFinite(number) && number >= 0 ? Math.max(0, number) : DEFAULT_TARGET_HOURS;
+        };
         const config = {
           version: DEFAULT_VERSION,
           labels: Object.assign({}, defaultLabels, source.labels || {}),
@@ -365,6 +372,7 @@
             workFrom: source.global && source.global.workFrom ? source.global.workFrom : DEFAULT_WORK_FROM,
             workTo: source.global && source.global.workTo ? source.global.workTo : DEFAULT_WORK_TO,
             collapseEmptyDaysByDefault: source.global && typeof source.global.collapseEmptyDaysByDefault === "boolean" ? source.global.collapseEmptyDaysByDefault : false,
+            targetHoursPerMonth: parseTargetHours(source.global && source.global.targetHoursPerMonth),
             workTypes: Array.isArray(source.global && source.global.workTypes) ? source.global.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
             dayFields: Array.isArray(source.global && source.global.dayFields) ? source.global.dayFields.map(normalizeDayField).filter(Boolean) : clone(defaultDayFields())
           },
@@ -376,6 +384,7 @@
               workFrom: profile.config && profile.config.workFrom ? profile.config.workFrom : DEFAULT_WORK_FROM,
               workTo: profile.config && profile.config.workTo ? profile.config.workTo : DEFAULT_WORK_TO,
               collapseEmptyDaysByDefault: profile.config && typeof profile.config.collapseEmptyDaysByDefault === "boolean" ? profile.config.collapseEmptyDaysByDefault : false,
+              targetHoursPerMonth: parseTargetHours(profile.config && profile.config.targetHoursPerMonth),
               workTypes: Array.isArray(profile.config && profile.config.workTypes) ? profile.config.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
               dayFields: Array.isArray(profile.config && profile.config.dayFields) ? profile.config.dayFields.map(normalizeDayField).filter(Boolean) : clone(defaultDayFields())
             }
@@ -388,6 +397,7 @@
               workFrom: project.config && project.config.workFrom ? project.config.workFrom : DEFAULT_WORK_FROM,
               workTo: project.config && project.config.workTo ? project.config.workTo : DEFAULT_WORK_TO,
               collapseEmptyDaysByDefault: project.config && typeof project.config.collapseEmptyDaysByDefault === "boolean" ? project.config.collapseEmptyDaysByDefault : false,
+              targetHoursPerMonth: parseTargetHours(project.config && project.config.targetHoursPerMonth),
               workTypes: Array.isArray(project.config && project.config.workTypes) ? project.config.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
               dayFields: Array.isArray(project.config && project.config.dayFields) ? project.config.dayFields.map(normalizeDayField).filter(Boolean) : clone(defaultDayFields())
             }
@@ -493,7 +503,7 @@
       }
 
       function getEffectiveConfig() {
-        const globalCfg = db.config.global || { timeResolution: DEFAULT_RESOLUTION, workFrom: DEFAULT_WORK_FROM, workTo: DEFAULT_WORK_TO, collapseEmptyDaysByDefault: false, workTypes: clone(defaultWorkTypes()), dayFields: clone(defaultDayFields()) };
+        const globalCfg = db.config.global || { timeResolution: DEFAULT_RESOLUTION, workFrom: DEFAULT_WORK_FROM, workTo: DEFAULT_WORK_TO, collapseEmptyDaysByDefault: false, targetHoursPerMonth: DEFAULT_TARGET_HOURS, workTypes: clone(defaultWorkTypes()), dayFields: clone(defaultDayFields()) };
         const profileCfg = getSelectedProfile() ? (getSelectedProfile().config || {}) : {};
         const projectCfg = getSelectedProject() ? (getSelectedProject().config || {}) : {};
 
@@ -502,6 +512,7 @@
           workFrom: projectCfg.workFrom || profileCfg.workFrom || globalCfg.workFrom || DEFAULT_WORK_FROM,
           workTo: projectCfg.workTo || profileCfg.workTo || globalCfg.workTo || DEFAULT_WORK_TO,
           collapseEmptyDaysByDefault: projectCfg.collapseEmptyDaysByDefault ?? profileCfg.collapseEmptyDaysByDefault ?? globalCfg.collapseEmptyDaysByDefault ?? false,
+          targetHoursPerMonth: Number(projectCfg.targetHoursPerMonth ?? profileCfg.targetHoursPerMonth ?? globalCfg.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS),
           workTypes: projectCfg.workTypes && projectCfg.workTypes.length ? projectCfg.workTypes : (profileCfg.workTypes && profileCfg.workTypes.length ? profileCfg.workTypes : (globalCfg.workTypes || clone(defaultWorkTypes()))),
           dayFields: projectCfg.dayFields && projectCfg.dayFields.length ? projectCfg.dayFields : (profileCfg.dayFields && profileCfg.dayFields.length ? profileCfg.dayFields : (globalCfg.dayFields || clone(defaultDayFields())))
         };
@@ -536,6 +547,12 @@
         return db.months[monthKey][state.selectedProfileId][state.selectedProjectId];
       }
 
+      function getMonthTargetHours() {
+        const cfg = getEffectiveConfig();
+        const target = Number(cfg.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS);
+        return Number.isFinite(target) && target >= 0 ? target : DEFAULT_TARGET_HOURS;
+      }
+
       function ensureDay(date) {
         const bucket = getMonthBucket();
         const cfg = getEffectiveConfig();
@@ -564,6 +581,15 @@
             bucket.days[date].extra[field.id] = field.defaultValue || "";
           }
         });
+        const totalMinutes = (bucket.days[date].actions || []).reduce((sum, action) => sum + actionMinutes(action), 0);
+        const isZeroWorkDay = totalMinutes === 0;
+        const shouldCollapse = Boolean(cfg.collapseEmptyDaysByDefault && isZeroWorkDay);
+        if (isZeroWorkDay && bucket.days[date].collapsed === undefined) {
+          bucket.days[date].collapsed = shouldCollapse;
+        }
+        if (isZeroWorkDay && bucket.days[date].collapsed !== shouldCollapse && cfg.collapseEmptyDaysByDefault) {
+          bucket.days[date].collapsed = true;
+        }
         return bucket.days[date];
       }
 
@@ -1046,13 +1072,14 @@
             count += 1;
           });
         });
+        const targetMinutes = getMonthTargetHours() * 60;
 
         $("#totalHours").textContent = fmtMin(totalMinutes);
-        $("#remainingHours").textContent = fmtMin(Math.max(0, LIMIT_MIN - totalMinutes));
+        $("#remainingHours").textContent = fmtMin(Math.max(0, targetMinutes - totalMinutes));
         $("#actionCount").textContent = String(count);
-        const pct = Math.min(100, (totalMinutes / LIMIT_MIN) * 100);
+        const pct = Math.min(100, (totalMinutes / Math.max(targetMinutes, 1)) * 100);
         $("#progressBar").style.width = `${pct}%`;
-        $("#limitBox").classList.toggle("limit-over", totalMinutes > LIMIT_MIN);
+        $("#limitBox").classList.toggle("limit-over", totalMinutes > targetMinutes);
       }
 
       function renderWorkTypeEditor(type) {
