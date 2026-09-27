@@ -183,6 +183,7 @@
       display: flex; align-items: center; gap: 8px; font-size: .86rem; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: #f8fafc;
     }
     .weekday-grid input { width: auto; margin: 0; }
+    @media (min-width:1400px){ .week { grid-template-columns: repeat(5,minmax(0,1fr)); } }
     @media (max-width:1100px){ .week { grid-template-columns: repeat(2,minmax(0,1fr)); } }
     @media (max-width:700px){
       :root { --day-nav-top: 0px; }
@@ -355,6 +356,7 @@
           bucket.days[date] = {
             workFrom: cfg.workFrom || DEFAULT_WORK_FROM,
             workTo: cfg.workTo || DEFAULT_WORK_TO,
+            workRangeAuto: true,
             area: "",
             nextPlan: "",
             risks: "",
@@ -387,6 +389,9 @@
         if (isZeroWorkDay && bucket.days[date].collapsed !== shouldCollapse && cfg.collapseEmptyDaysByDefault && isMeaningfullyEmpty) {
           bucket.days[date].collapsed = true;
         }
+        if (bucket.days[date].workRangeAuto !== false) {
+          syncDayWorkRange(bucket.days[date], cfg);
+        }
         return bucket.days[date];
       }
 
@@ -401,6 +406,29 @@
       function getFieldValue(day, fieldId) {
         if (day && day.extra && Object.prototype.hasOwnProperty.call(day.extra, fieldId)) return day.extra[fieldId] || "";
         return day && day[fieldId] ? day[fieldId] : "";
+      }
+
+      function syncDayWorkRange(day, config = getEffectiveConfig()) {
+        if (!day || day.workRangeAuto === false) return;
+        const actions = Array.isArray(day.actions) ? day.actions : [];
+        if (!actions.length) return;
+
+        const valid = actions.filter((action) => action && (action.from || action.to));
+        if (!valid.length) return;
+
+        const starts = valid.map((action) => timeToMin(action.from)).filter((value) => value !== null);
+        const ends = valid.map((action) => timeToMin(action.to)).filter((value) => value !== null);
+        const minFrom = starts.length ? Math.min(...starts) : null;
+        const maxTo = ends.length ? Math.max(...ends) : null;
+
+        if (minFrom === null || maxTo === null) return;
+
+        const normalizedFrom = roundTime(`${pad(Math.floor(minFrom / 60))}:${pad(minFrom % 60)}`, config.timeResolution);
+        const normalizedTo = roundTime(`${pad(Math.floor(maxTo / 60))}:${pad(maxTo % 60)}`, config.timeResolution);
+
+        day.workFrom = normalizedFrom;
+        day.workTo = normalizedTo;
+        day.workRangeAuto = true;
       }
 
       function setDayField(day, fieldId, value) {
@@ -875,6 +903,7 @@
                 const value = roundTime(input.value, getEffectiveConfig().timeResolution);
                 input.value = value;
                 day[field] = value;
+                day.workRangeAuto = false;
               } else {
                 setDayField(day, field, input.value);
               }
@@ -901,6 +930,7 @@
               const type = (getEffectiveConfig().workTypes || [])[0];
               const newAction = type ? buildActionDefaults(type.id, getEffectiveConfig().workTypes, getEffectiveConfig().timeResolution) : { workType: "", from: "", to: "", description: "", notes: "", attrs: {} };
               day.actions.push(newAction);
+              syncDayWorkRange(day, getEffectiveConfig());
               day.collapsed = false;
               saveDb();
               render();
@@ -987,6 +1017,7 @@
                 duration.textContent = fmtMin(actionMinutes(action));
                 const totalMinutes = (day.actions || []).reduce((sum, item) => sum + actionMinutes(item), 0);
                 dayEl.closest(".day").querySelector(".day-total").textContent = fmtMin(totalMinutes);
+                syncDayWorkRange(day, getEffectiveConfig());
                 day.collapsed = false;
                 saveDb();
                 updateStats();
