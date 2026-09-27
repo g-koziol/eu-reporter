@@ -202,13 +202,10 @@
       display: flex; align-items: center; gap: 8px; font-size: .86rem; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: #f8fafc;
     }
     .weekday-grid input { width: auto; margin: 0; }
-    @media (min-width:1400px){ .week { grid-template-columns: repeat(5,minmax(0,1fr)); } }
-    @media (max-width:1100px){ .week { grid-template-columns: repeat(2,minmax(0,1fr)); } }
     @media (max-width:700px){
       :root { --day-nav-top: 0px; }
       header { position: static; }
       .day-nav { top: 0; }
-      .week { grid-template-columns: 1fr; }
       .stats { grid-template-columns: 1fr; }
       .action-top, .row2 { grid-template-columns: 1fr; }
       .day-range-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -324,6 +321,12 @@
         return (db.config.projects || []).find((project) => project.id === state.selectedProjectId) || db.config.projects[0];
       }
 
+      function normalizeCardsPerRow(value, fallback = 2) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return fallback;
+        return Math.min(6, Math.max(1, Math.round(parsed)));
+      }
+
       function getEffectiveConfig() {
         const globalCfg = db.config.global || { timeResolution: DEFAULT_RESOLUTION, workFrom: DEFAULT_WORK_FROM, workTo: DEFAULT_WORK_TO, cardsPerRow: 2, collapseEmptyDaysByDefault: false, targetHoursPerMonth: DEFAULT_TARGET_HOURS, workTypes: clone(defaultWorkTypes()), dayFields: clone(defaultDayFields()), collaborationRecords: defaultCollaborationRecordConfig() };
         const profileCfg = getSelectedProfile() ? (getSelectedProfile().config || {}) : {};
@@ -333,7 +336,7 @@
           timeResolution: normalizeResolution(projectCfg.timeResolution || profileCfg.timeResolution || globalCfg.timeResolution || DEFAULT_RESOLUTION),
           workFrom: projectCfg.workFrom || profileCfg.workFrom || globalCfg.workFrom || DEFAULT_WORK_FROM,
           workTo: projectCfg.workTo || profileCfg.workTo || globalCfg.workTo || DEFAULT_WORK_TO,
-          cardsPerRow: Number(projectCfg.cardsPerRow ?? profileCfg.cardsPerRow ?? globalCfg.cardsPerRow ?? 2),
+          cardsPerRow: normalizeCardsPerRow(projectCfg.cardsPerRow ?? profileCfg.cardsPerRow ?? globalCfg.cardsPerRow ?? 2, 2),
           collapseEmptyDaysByDefault: projectCfg.collapseEmptyDaysByDefault ?? profileCfg.collapseEmptyDaysByDefault ?? globalCfg.collapseEmptyDaysByDefault ?? false,
           targetHoursPerMonth: Number(projectCfg.targetHoursPerMonth ?? profileCfg.targetHoursPerMonth ?? globalCfg.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS),
           workTypes: projectCfg.workTypes && projectCfg.workTypes.length ? projectCfg.workTypes : (profileCfg.workTypes && profileCfg.workTypes.length ? profileCfg.workTypes : (globalCfg.workTypes || clone(defaultWorkTypes()))),
@@ -1677,6 +1680,14 @@
           updateStats();
         });
 
+        $("#globalCardsPerRow").addEventListener("input", (event) => {
+          const value = normalizeCardsPerRow(event.target.value, 2);
+          db.config.global.cardsPerRow = value;
+          event.target.value = value;
+          saveDb();
+          render();
+        });
+
         $("#globalCollapseEmptyDays").addEventListener("change", (event) => {
           db.config.global.collapseEmptyDaysByDefault = Boolean(event.target.checked);
           saveDb();
@@ -1845,6 +1856,16 @@
               targetHoursInput.value = profile.config.targetHoursPerMonth;
               saveDb();
               updateStats();
+            });
+          }
+
+          const cardsPerRowInput = card.querySelector("[data-profile-cards-per-row]");
+          if (cardsPerRowInput) {
+            cardsPerRowInput.addEventListener("input", () => {
+              profile.config.cardsPerRow = normalizeCardsPerRow(cardsPerRowInput.value, 2);
+              cardsPerRowInput.value = profile.config.cardsPerRow;
+              saveDb();
+              render();
             });
           }
 
@@ -2126,6 +2147,16 @@
               targetHoursInput.value = project.config.targetHoursPerMonth;
               saveDb();
               updateStats();
+            });
+          }
+
+          const cardsPerRowInput = card.querySelector("[data-project-cards-per-row]");
+          if (cardsPerRowInput) {
+            cardsPerRowInput.addEventListener("input", () => {
+              project.config.cardsPerRow = normalizeCardsPerRow(cardsPerRowInput.value, 2);
+              cardsPerRowInput.value = project.config.cardsPerRow;
+              saveDb();
+              render();
             });
           }
 
@@ -2499,21 +2530,19 @@
         const optionsBtn = $("#optionsBtn");
         const optionsMenu = $("#optionsMenu");
         if (optionsBtn && optionsMenu) {
-          const toggleMenu = () => {
-            const isOpen = !optionsMenu.classList.contains("hidden");
-            optionsMenu.classList.toggle("hidden", isOpen);
-            optionsBtn.setAttribute("aria-expanded", String(!isOpen));
+          const closeMenu = () => {
+            optionsMenu.classList.add("hidden");
+            optionsBtn.setAttribute("aria-expanded", "false");
           };
           optionsBtn.addEventListener("click", (event) => {
             event.stopPropagation();
-            const isOpen = !optionsMenu.classList.contains("hidden");
-            optionsMenu.classList.toggle("hidden", isOpen);
-            optionsBtn.setAttribute("aria-expanded", String(!isOpen));
+            const shouldOpen = optionsMenu.classList.contains("hidden");
+            optionsMenu.classList.toggle("hidden", !shouldOpen);
+            optionsBtn.setAttribute("aria-expanded", String(shouldOpen));
           });
           document.addEventListener("click", (event) => {
             if (!optionsMenu.contains(event.target) && !optionsBtn.contains(event.target)) {
-              optionsMenu.classList.add("hidden");
-              optionsBtn.setAttribute("aria-expanded", "false");
+              closeMenu();
             }
           });
         }
@@ -2562,18 +2591,6 @@
         render();
       });
 
-      $("#exportBtn").addEventListener("click", async () => {
-        try {
-          await exportJsonFile();
-        } catch (err) {
-          alert("Nie udało się wyeksportować pliku JSON: " + err.message);
-        }
-      });
-
-      $("#exportPdfBtn").addEventListener("click", () => {
-        exportMonthPdf();
-      });
-
       $("#importInput").addEventListener("change", async (event) => {
         const file = event.target.files && event.target.files[0];
         if (!file) return;
@@ -2583,18 +2600,6 @@
           alert("Nie udało się wczytać pliku JSON: " + err.message);
         } finally {
           event.target.value = "";
-        }
-      });
-
-      $("#clearBtn").addEventListener("click", () => {
-        const monthBucket = db.months[currentMonth] || {};
-        if (!monthBucket || !monthBucket[state.selectedProfileId] || !monthBucket[state.selectedProfileId][state.selectedProjectId]) {
-          return;
-        }
-        if (confirm(`Usunąć wszystkie dane dla ${currentMonth}?`)) {
-          delete monthBucket[state.selectedProfileId][state.selectedProjectId];
-          saveDb();
-          render();
         }
       });
 
