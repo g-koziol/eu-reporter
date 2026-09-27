@@ -41,6 +41,25 @@
       align-items: center;
       flex-wrap: wrap;
     }
+    .toolbar-menu {
+      position: relative;
+      margin-left: auto;
+    }
+    .toolbar-menu-panel {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      min-width: 220px;
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+      z-index: 22;
+    }
+    .toolbar-menu-panel.hidden { display: none; }
     button, .btn, input, select, textarea { font: inherit; }
     button, .btn {
       border: 1px solid var(--line);
@@ -63,7 +82,7 @@
     .stat { background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
     .stat b { display: block; font-size: 1.2rem; }
     .weeks { padding: 14px 0 40px; }
-    .week { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 10px; margin-bottom: 10px; }
+    .week { display: grid; grid-template-columns: repeat(var(--calendar-cards-per-row, 2), minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
     .day { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-width: 0; }
     .day.off { opacity: .45; }
     .day.is-focused { border-color: rgba(37, 99, 235, 0.5); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08); }
@@ -211,13 +230,18 @@
         <label style="width:auto"><span id="projectLabelText">Projekt</span>
           <select id="projectSelect" style="width:auto"></select>
         </label>
-        <button id="configBtn" class="primary" type="button">Konfiguracja</button>
-        <button id="exportBtn" type="button">Eksport JSON</button>
-        <button id="exportPdfBtn" type="button">Eksport PDF</button>
-        <label class="btn"><span id="importLabelText">Import JSON</span>
-          <input id="importInput" type="file" accept="application/json,.json" class="hidden">
-        </label>
-        <button id="clearBtn" class="danger" type="button">Wyczyść bieżący miesiąc</button>
+        <div class="toolbar-menu">
+          <button id="optionsBtn" class="primary" type="button" aria-expanded="false">⋯</button>
+          <div id="optionsMenu" class="toolbar-menu-panel hidden" role="menu" aria-label="Dodatkowe opcje">
+            <button id="configBtn" type="button">Konfiguracja</button>
+            <button id="exportBtn" type="button">Eksport JSON</button>
+            <button id="exportPdfBtn" type="button">Eksport PDF</button>
+            <label class="btn"><span id="importLabelText">Import JSON</span>
+              <input id="importInput" type="file" accept="application/json,.json" class="hidden">
+            </label>
+            <button id="clearBtn" class="danger" type="button">Wyczyść bieżący miesiąc</button>
+          </div>
+        </div>
       </div>
       <div id="limitBox">
         <div class="stats">
@@ -301,7 +325,7 @@
       }
 
       function getEffectiveConfig() {
-        const globalCfg = db.config.global || { timeResolution: DEFAULT_RESOLUTION, workFrom: DEFAULT_WORK_FROM, workTo: DEFAULT_WORK_TO, collapseEmptyDaysByDefault: false, targetHoursPerMonth: DEFAULT_TARGET_HOURS, workTypes: clone(defaultWorkTypes()), dayFields: clone(defaultDayFields()), collaborationRecords: defaultCollaborationRecordConfig() };
+        const globalCfg = db.config.global || { timeResolution: DEFAULT_RESOLUTION, workFrom: DEFAULT_WORK_FROM, workTo: DEFAULT_WORK_TO, cardsPerRow: 2, collapseEmptyDaysByDefault: false, targetHoursPerMonth: DEFAULT_TARGET_HOURS, workTypes: clone(defaultWorkTypes()), dayFields: clone(defaultDayFields()), collaborationRecords: defaultCollaborationRecordConfig() };
         const profileCfg = getSelectedProfile() ? (getSelectedProfile().config || {}) : {};
         const projectCfg = getSelectedProject() ? (getSelectedProject().config || {}) : {};
 
@@ -309,6 +333,7 @@
           timeResolution: normalizeResolution(projectCfg.timeResolution || profileCfg.timeResolution || globalCfg.timeResolution || DEFAULT_RESOLUTION),
           workFrom: projectCfg.workFrom || profileCfg.workFrom || globalCfg.workFrom || DEFAULT_WORK_FROM,
           workTo: projectCfg.workTo || profileCfg.workTo || globalCfg.workTo || DEFAULT_WORK_TO,
+          cardsPerRow: Number(projectCfg.cardsPerRow ?? profileCfg.cardsPerRow ?? globalCfg.cardsPerRow ?? 2),
           collapseEmptyDaysByDefault: projectCfg.collapseEmptyDaysByDefault ?? profileCfg.collapseEmptyDaysByDefault ?? globalCfg.collapseEmptyDaysByDefault ?? false,
           targetHoursPerMonth: Number(projectCfg.targetHoursPerMonth ?? profileCfg.targetHoursPerMonth ?? globalCfg.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS),
           workTypes: projectCfg.workTypes && projectCfg.workTypes.length ? projectCfg.workTypes : (profileCfg.workTypes && profileCfg.workTypes.length ? profileCfg.workTypes : (globalCfg.workTypes || clone(defaultWorkTypes()))),
@@ -642,6 +667,9 @@
           return;
         }
 
+        const cfg = getEffectiveConfig();
+        const cardsPerRow = Number.isFinite(cfg.cardsPerRow) ? Math.min(6, Math.max(1, Math.round(cfg.cardsPerRow))) : 2;
+        document.documentElement.style.setProperty("--calendar-cards-per-row", String(cardsPerRow));
         const monthDates = monthGrid(currentMonth);
         const [year, month] = currentMonth.split("-").map(Number);
         const monthList = monthDates.filter((dateObj) => dateObj.getFullYear() === year && dateObj.getMonth() + 1 === month);
@@ -679,8 +707,6 @@
         $("#exportPdfBtn").textContent = labels.exportPdf;
         $("#importLabelText").textContent = labels.importJson;
         $("#clearBtn").textContent = labels.clearMonth;
-        const cfg = getEffectiveConfig();
-
         const navStrip = $("#dayNavStrip");
         if (navStrip) {
           navStrip.innerHTML = monthList.map((dateObj) => {
@@ -1341,9 +1367,14 @@
               </label>
             </div>
             <div class="row2" style="margin-bottom:12px;">
+              <label>Ilość kart w rzędzie
+                <input type="number" min="1" max="6" step="1" data-profile-cards-per-row value="${esc(profile.config.cardsPerRow ?? 2)}">
+              </label>
               <label>Cel godzin na miesiąc
                 <input type="number" min="0" step="1" data-profile-target-hours value="${esc(profile.config.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS)}">
               </label>
+            </div>
+            <div class="row2" style="margin-bottom:12px;">
               <label style="display:flex;align-items:center;gap:8px; height:100%;">
                 <input type="checkbox" data-profile-collapse-empty-days ${profile.config.collapseEmptyDaysByDefault ? "checked" : ""}>
                 <span>Zwijaj puste dni domyślnie</span>
@@ -1402,9 +1433,14 @@
               </label>
             </div>
             <div class="row2" style="margin-bottom:12px;">
+              <label>Ilość kart w rzędzie
+                <input type="number" min="1" max="6" step="1" data-project-cards-per-row value="${esc(project.config.cardsPerRow ?? 2)}">
+              </label>
               <label>Cel godzin na miesiąc
                 <input type="number" min="0" step="1" data-project-target-hours value="${esc(project.config.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS)}">
               </label>
+            </div>
+            <div class="row2" style="margin-bottom:12px;">
               <label style="display:flex;align-items:center;gap:8px; height:100%;">
                 <input type="checkbox" data-project-collapse-empty-days ${project.config.collapseEmptyDaysByDefault ? "checked" : ""}>
                 <span>Zwijaj puste dni domyślnie</span>
@@ -1457,7 +1493,7 @@
         const config = db.config || createDefaultConfig();
         const profiles = config.profiles || [];
         const projects = config.projects || [];
-        const globalCfg = config.global || { timeResolution: DEFAULT_RESOLUTION, workFrom: DEFAULT_WORK_FROM, workTo: DEFAULT_WORK_TO, workTypes: clone(defaultWorkTypes()), dayFields: clone(defaultDayFields()) };
+        const globalCfg = config.global || { timeResolution: DEFAULT_RESOLUTION, workFrom: DEFAULT_WORK_FROM, workTo: DEFAULT_WORK_TO, cardsPerRow: 2, workTypes: clone(defaultWorkTypes()), dayFields: clone(defaultDayFields()) };
         const labels = getLabels();
         const pageInfo = getPageInfo();
 
@@ -1497,8 +1533,17 @@
                     <option value="hour" ${(globalCfg.timeResolution || DEFAULT_RESOLUTION) === "hour" ? "selected" : ""}>Godziny</option>
                   </select>
                 </label>
+                <label>Ilość kart w rzędzie
+                  <input id="globalCardsPerRow" type="number" min="1" max="6" step="1" value="${esc(globalCfg.cardsPerRow ?? 2)}">
+                </label>
+              </div>
+              <div class="row2" style="margin-top:10px;">
                 <label>Cel godzin na miesiąc
                   <input id="globalTargetHours" type="number" min="0" step="1" value="${esc(globalCfg.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS)}">
+                </label>
+                <label style="align-self:end;display:flex;align-items:center;gap:8px; height:100%;">
+                  <input id="globalCollapseEmptyDays" type="checkbox" ${globalCfg.collapseEmptyDaysByDefault ? "checked" : ""}>
+                  <span>Zwijaj puste dni automatycznie</span>
                 </label>
               </div>
               <div class="row2" style="margin-top:10px;">
@@ -1508,12 +1553,8 @@
                     <input id="globalWorkTo" type="time" value="${esc(globalCfg.workTo || DEFAULT_WORK_TO)}" step="${stepForResolution(globalCfg.timeResolution || DEFAULT_RESOLUTION)}">
                   </div>
                 </label>
-                <label style="align-self:end;display:flex;align-items:center;gap:8px; height:100%;">
-                  <input id="globalCollapseEmptyDays" type="checkbox" ${globalCfg.collapseEmptyDaysByDefault ? "checked" : ""}>
-                  <span>Zwijaj puste dni automatycznie</span>
-                </label>
               </div>
-              <div class="small">Konfiguracja jest wersjonowana. Obecna wersja: ${config.version || DEFAULT_VERSION}</div>
+              <div class="small" style="margin-top:10px;">Konfiguracja jest wersjonowana. Obecna wersja: ${config.version || DEFAULT_VERSION}</div>
             </section>
 
             <section class="day" style="padding:16px;">
@@ -2422,6 +2463,7 @@
         if (document.querySelector("#monthLabelText")) document.querySelector("#monthLabelText").textContent = labels.month;
         if (document.querySelector("#profileLabelText")) document.querySelector("#profileLabelText").textContent = labels.profile;
         if (document.querySelector("#projectLabelText")) document.querySelector("#projectLabelText").textContent = labels.project;
+        if (document.querySelector("#optionsBtn")) document.querySelector("#optionsBtn").textContent = "⋯";
         if (document.querySelector("#configBtn")) document.querySelector("#configBtn").textContent = labels.config;
         if (document.querySelector("#exportBtn")) document.querySelector("#exportBtn").textContent = labels.exportJson;
         if (document.querySelector("#exportPdfBtn")) document.querySelector("#exportPdfBtn").textContent = labels.exportPdf;
@@ -2454,10 +2496,65 @@
           });
         }
 
-        $("#configBtn").addEventListener("click", () => {
-          state.configOpen = true;
-          render();
-        });
+        const optionsBtn = $("#optionsBtn");
+        const optionsMenu = $("#optionsMenu");
+        if (optionsBtn && optionsMenu) {
+          const toggleMenu = () => {
+            const isOpen = !optionsMenu.classList.contains("hidden");
+            optionsMenu.classList.toggle("hidden", isOpen);
+            optionsBtn.setAttribute("aria-expanded", String(!isOpen));
+          };
+          optionsBtn.addEventListener("click", (event) => {
+            event.stopPropagation();
+            const isOpen = !optionsMenu.classList.contains("hidden");
+            optionsMenu.classList.toggle("hidden", isOpen);
+            optionsBtn.setAttribute("aria-expanded", String(!isOpen));
+          });
+          document.addEventListener("click", (event) => {
+            if (!optionsMenu.contains(event.target) && !optionsBtn.contains(event.target)) {
+              optionsMenu.classList.add("hidden");
+              optionsBtn.setAttribute("aria-expanded", "false");
+            }
+          });
+        }
+
+        const configBtn = $("#configBtn");
+        const exportBtn = $("#exportBtn");
+        const exportPdfBtn = $("#exportPdfBtn");
+        const clearBtn = $("#clearBtn");
+        if (configBtn) {
+          configBtn.addEventListener("click", () => {
+            const optionsMenu = $("#optionsMenu");
+            if (optionsMenu) optionsMenu.classList.add("hidden");
+            state.configOpen = true;
+            render();
+          });
+        }
+        if (exportBtn) {
+          exportBtn.addEventListener("click", async () => {
+            try {
+              await exportJsonFile();
+            } catch (err) {
+              alert("Nie udało się wyeksportować pliku JSON: " + err.message);
+            }
+          });
+        }
+        if (exportPdfBtn) {
+          exportPdfBtn.addEventListener("click", () => exportMonthPdf());
+        }
+        if (clearBtn) {
+          clearBtn.addEventListener("click", () => {
+            const monthBucket = db.months[currentMonth] || {};
+            if (!monthBucket || !monthBucket[state.selectedProfileId] || !monthBucket[state.selectedProfileId][state.selectedProjectId]) {
+              return;
+            }
+            if (confirm(`Usunąć wszystkie dane dla ${currentMonth}?`)) {
+              delete monthBucket[state.selectedProfileId][state.selectedProjectId];
+              saveDb();
+              render();
+            }
+          });
+        }
       }
 
       $("#monthPicker").addEventListener("change", (event) => {

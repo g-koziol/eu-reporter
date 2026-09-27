@@ -61,6 +61,12 @@ export function normalizeConfig(raw) {
     return Number.isFinite(number) && number >= 0 ? Math.max(0, number) : DEFAULT_TARGET_HOURS;
   };
 
+  const parseCardsPerRow = (value) => {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return 2;
+    return Math.min(6, Math.max(1, Math.round(number)));
+  };
+
   const normalizeCollaborationAttributes = (value) => {
     if (!Array.isArray(value)) return clone(defaultCollaborationRecordAttributes());
     return value.map((attr) => ({
@@ -106,6 +112,7 @@ export function normalizeConfig(raw) {
       timeResolution: source.global && source.global.timeResolution ? source.global.timeResolution : DEFAULT_RESOLUTION,
       workFrom: source.global && source.global.workFrom ? source.global.workFrom : DEFAULT_WORK_FROM,
       workTo: source.global && source.global.workTo ? source.global.workTo : DEFAULT_WORK_TO,
+      cardsPerRow: parseCardsPerRow(source.global && source.global.cardsPerRow),
       collapseEmptyDaysByDefault: source.global && typeof source.global.collapseEmptyDaysByDefault === 'boolean' ? source.global.collapseEmptyDaysByDefault : false,
       targetHoursPerMonth: parseTargetHours(source.global && source.global.targetHoursPerMonth),
       workTypes: Array.isArray(source.global && source.global.workTypes) ? source.global.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
@@ -119,6 +126,7 @@ export function normalizeConfig(raw) {
         timeResolution: profile.config && profile.config.timeResolution ? profile.config.timeResolution : DEFAULT_RESOLUTION,
         workFrom: profile.config && profile.config.workFrom ? profile.config.workFrom : DEFAULT_WORK_FROM,
         workTo: profile.config && profile.config.workTo ? profile.config.workTo : DEFAULT_WORK_TO,
+        cardsPerRow: parseCardsPerRow(profile.config && profile.config.cardsPerRow),
         collapseEmptyDaysByDefault: profile.config && typeof profile.config.collapseEmptyDaysByDefault === 'boolean' ? profile.config.collapseEmptyDaysByDefault : false,
         targetHoursPerMonth: parseTargetHours(profile.config && profile.config.targetHoursPerMonth),
         workTypes: Array.isArray(profile.config && profile.config.workTypes) ? profile.config.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
@@ -133,6 +141,7 @@ export function normalizeConfig(raw) {
         timeResolution: project.config && project.config.timeResolution ? project.config.timeResolution : DEFAULT_RESOLUTION,
         workFrom: project.config && project.config.workFrom ? project.config.workFrom : DEFAULT_WORK_FROM,
         workTo: project.config && project.config.workTo ? project.config.workTo : DEFAULT_WORK_TO,
+        cardsPerRow: parseCardsPerRow(project.config && project.config.cardsPerRow),
         collapseEmptyDaysByDefault: project.config && typeof project.config.collapseEmptyDaysByDefault === 'boolean' ? project.config.collapseEmptyDaysByDefault : false,
         targetHoursPerMonth: parseTargetHours(project.config && project.config.targetHoursPerMonth),
         workTypes: Array.isArray(project.config && project.config.workTypes) ? project.config.workTypes.map(normalizeWorkType).filter(Boolean) : clone(defaultWorkTypes()),
