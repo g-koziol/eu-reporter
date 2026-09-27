@@ -941,7 +941,7 @@
               }
               day.collapsed = false;
               saveDb();
-              render();
+              updateStats();
             });
           });
 
@@ -951,7 +951,7 @@
               setDayField(day, input.dataset.dayField, input.value);
               day.collapsed = false;
               saveDb();
-              render();
+              updateStats();
             });
           });
 
@@ -998,6 +998,7 @@
                 record.attrs[attrId] = input.value;
                 day.collapsed = false;
                 saveDb();
+                updateStats();
               });
             });
 
@@ -1698,35 +1699,30 @@
           db.config.pageInfo = db.config.pageInfo || defaultPageInfo();
           db.config.pageInfo.title = event.target.value || defaultPageInfo().title;
           saveDb();
-          renderPageInfo();
         });
 
         $("#pageInfoSummaryInput").addEventListener("input", (event) => {
           db.config.pageInfo = db.config.pageInfo || defaultPageInfo();
           db.config.pageInfo.summary = event.target.value || defaultPageInfo().summary;
           saveDb();
-          renderPageInfo();
         });
 
         $("#pageInfoOwnerNameInput").addEventListener("input", (event) => {
           db.config.pageInfo = db.config.pageInfo || defaultPageInfo();
           db.config.pageInfo.ownerName = event.target.value || defaultPageInfo().ownerName;
           saveDb();
-          renderPageInfo();
         });
 
         $("#pageInfoOwnerUrlInput").addEventListener("input", (event) => {
           db.config.pageInfo = db.config.pageInfo || defaultPageInfo();
           db.config.pageInfo.ownerUrl = event.target.value || defaultPageInfo().ownerUrl;
           saveDb();
-          renderPageInfo();
         });
 
         $("#pageInfoFooterTextInput").addEventListener("input", (event) => {
           db.config.pageInfo = db.config.pageInfo || defaultPageInfo();
           db.config.pageInfo.footerText = event.target.value || defaultPageInfo().footerText;
           saveDb();
-          renderPageInfo();
         });
 
         $("#addAboutCardBtn").addEventListener("click", () => {
@@ -1747,7 +1743,6 @@
             titleInput.addEventListener("input", () => {
               infoCard.title = titleInput.value || "Nowa karta";
               saveDb();
-              renderPageInfo();
             });
           }
 
@@ -1756,7 +1751,6 @@
             bodyInput.addEventListener("input", () => {
               infoCard.body = bodyInput.value || "";
               saveDb();
-              renderPageInfo();
             });
           }
 
@@ -1795,7 +1789,6 @@
             db.config.labels = db.config.labels || createDefaultLabels();
             db.config.labels[key] = input.value || createDefaultLabels()[key];
             saveDb();
-            render();
           });
         });
 
