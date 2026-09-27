@@ -35,5 +35,6 @@ export {
 
 export { normalizeWorkType, normalizeDayField, normalizeConfig } from './config/normalize.js';
 export { loadDb, saveDb } from './storage.js';
+export { encryptJsonPayload, decryptJsonPayload, isEncryptedFilePayload } from './crypto.js';
 export { buildPdfReportHtml, exportMonthPdf } from './render/pdf.js';
 export { createInitialState } from './state/index.js';

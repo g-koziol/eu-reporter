@@ -278,6 +278,9 @@
         normalizeConfig,
         loadDb,
         saveDb,
+        encryptJsonPayload,
+        decryptJsonPayload,
+        isEncryptedFilePayload,
         normalizeResolution,
         stepForResolution,
         roundTime,
@@ -2305,6 +2308,75 @@
         });
       }
 
+      async function exportJsonFile() {
+        saveDb();
+        const payload = {
+          app: "Ewidencja działań projektowych",
+          version: DEFAULT_VERSION,
+          exportedAt: new Date().toISOString(),
+          data: db
+        };
+
+        const shouldEncrypt = window.confirm("Czy zaszyfrować plik JSON hasłem?");
+        if (!shouldEncrypt) {
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = `ewidencja-${currentMonth}.json`;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(link.href);
+          return;
+        }
+
+        const password = window.prompt("Wprowadź hasło do zaszyfrowania pliku JSON:");
+        if (password === null) return;
+        if (!password.trim()) {
+          alert("Hasło nie może być puste.");
+          return;
+        }
+
+        const encrypted = await encryptJsonPayload(payload, password);
+        const blob = new Blob([JSON.stringify(encrypted, null, 2)], { type: "application/json" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `ewidencja-${currentMonth}.encrypted.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(link.href);
+      }
+
+      async function importJsonFile(file) {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        let incoming = parsed && parsed.data && !isEncryptedFilePayload(parsed) ? parsed.data : parsed;
+
+        if (isEncryptedFilePayload(parsed)) {
+          const password = window.prompt("Plik jest zaszyfrowany. Wprowadź hasło do odszyfrowania:");
+          if (password === null) {
+            throw new Error("Import został anulowany.");
+          }
+          incoming = await decryptJsonPayload(parsed, password);
+          incoming = incoming && incoming.data ? incoming.data : incoming;
+        }
+
+        if (!incoming || typeof incoming !== "object" || !incoming.months) {
+          throw new Error("Nieprawidłowy format pliku");
+        }
+
+        db = {
+          version: DEFAULT_VERSION,
+          config: normalizeConfig(incoming.config || incoming),
+          months: incoming.months || {}
+        };
+        saveDb();
+        initializeSelectors();
+        render();
+        alert("Import zakończony.");
+      }
+
       let currentMonth = ym(new Date());
       let db = loadDb();
 
@@ -2362,22 +2434,12 @@
         render();
       });
 
-      $("#exportBtn").addEventListener("click", () => {
-        saveDb();
-        const payload = {
-          app: "Ewidencja działań projektowych",
-          version: DEFAULT_VERSION,
-          exportedAt: new Date().toISOString(),
-          data: db
-        };
-        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `ewidencja-${currentMonth}.json`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(link.href);
+      $("#exportBtn").addEventListener("click", async () => {
+        try {
+          await exportJsonFile();
+        } catch (err) {
+          alert("Nie udało się wyeksportować pliku JSON: " + err.message);
+        }
       });
 
       $("#exportPdfBtn").addEventListener("click", () => {
@@ -2388,20 +2450,7 @@
         const file = event.target.files && event.target.files[0];
         if (!file) return;
         try {
-          const parsed = JSON.parse(await file.text());
-          const incoming = parsed && parsed.data ? parsed.data : parsed;
-          if (!incoming || typeof incoming !== "object" || !incoming.months) {
-            throw new Error("Nieprawidłowy format pliku");
-          }
-          db = {
-            version: DEFAULT_VERSION,
-            config: normalizeConfig(incoming.config || incoming),
-            months: incoming.months || {}
-          };
-          saveDb();
-          initializeSelectors();
-          render();
-          alert("Import zakończony.");
+          await importJsonFile(file);
         } catch (err) {
           alert("Nie udało się wczytać pliku JSON: " + err.message);
         } finally {
