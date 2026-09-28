@@ -2598,15 +2598,16 @@
       }
 
       async function importJsonFile(file) {
+        const shouldReplace = window.confirm("Import zastąpi bieżącą konfigurację i wszystkie lokalnie zapisane dane. Czy kontynuować?");
+        if (!shouldReplace) return false;
+
         const text = await file.text();
         const parsed = JSON.parse(text);
         let incoming = parsed && parsed.data && !isEncryptedFilePayload(parsed) ? parsed.data : parsed;
 
         if (isEncryptedFilePayload(parsed)) {
           const password = window.prompt("Plik jest zaszyfrowany. Wprowadź hasło do odszyfrowania:");
-          if (password === null) {
-            throw new Error("Import został anulowany.");
-          }
+          if (password === null) return false;
           incoming = await decryptJsonPayload(parsed, password);
           incoming = incoming && incoming.data ? incoming.data : incoming;
         }
@@ -2624,6 +2625,7 @@
         initializeSelectors();
         render();
         alert("Import zakończony.");
+        return true;
       }
 
       let currentMonth = ym(new Date());
