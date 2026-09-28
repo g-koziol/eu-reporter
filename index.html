@@ -2599,7 +2599,7 @@
 
       async function importJsonFile(file) {
         const shouldReplace = window.confirm("Import zastąpi bieżącą konfigurację i wszystkie lokalnie zapisane dane. Czy kontynuować?");
-        if (!shouldReplace) return false;
+        if (!shouldReplace) return "cancelled";
 
         const text = await file.text();
         const parsed = JSON.parse(text);
@@ -2607,7 +2607,7 @@
 
         if (isEncryptedFilePayload(parsed)) {
           const password = window.prompt("Plik jest zaszyfrowany. Wprowadź hasło do odszyfrowania:");
-          if (password === null) return false;
+          if (password === null) return "cancelled";
           incoming = await decryptJsonPayload(parsed, password);
           incoming = incoming && incoming.data ? incoming.data : incoming;
         }
@@ -2625,7 +2625,7 @@
         initializeSelectors();
         render();
         alert("Import zakończony.");
-        return true;
+        return "imported";
       }
 
       let currentMonth = ym(new Date());
