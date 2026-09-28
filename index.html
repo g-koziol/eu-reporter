@@ -202,6 +202,29 @@
       display: flex; align-items: center; gap: 8px; font-size: .86rem; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: #f8fafc;
     }
     .weekday-grid input { width: auto; margin: 0; }
+    .toast-host {
+      position: fixed; right: 18px; bottom: 18px; display: grid; gap: 8px; z-index: 40;
+    }
+    .toast {
+      background: rgba(17, 24, 39, 0.96); color: #fff; border-radius: 10px; padding: 10px 12px;
+      box-shadow: 0 18px 30px rgba(15, 23, 42, 0.2); opacity: 0; transform: translateY(10px);
+      transition: opacity .2s ease, transform .2s ease;
+      max-width: min(320px, calc(100vw - 32px));
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .config-group { border: 1px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
+    .config-group > summary {
+      list-style: none; cursor: pointer; padding: 10px 12px; background: #f8fafc; font-weight: 700; color: var(--text);
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    .config-group > summary::-webkit-details-marker { display: none; }
+    .config-group > summary::after {
+      content: "▾"; font-size: .85rem; color: var(--muted); transform: rotate(0deg); transition: transform .2s ease;
+    }
+    .config-group[open] > summary::after { transform: rotate(180deg); }
+    .config-group-body { padding: 12px; display: grid; gap: 12px; }
+    .nested-config-group > summary { background: #fff; font-size: .92rem; }
+    .config-item-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     @media (max-width:700px){
       :root { --day-nav-top: 0px; }
       header { position: static; }
@@ -255,6 +278,7 @@
   <main class="wrap weeks" id="calendar"></main>
 
   <footer class="page-footer" id="pageFooter"></footer>
+  <div id="saveToastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
 
   <div id="pageInfoModal" class="modal hidden" aria-hidden="true">
     <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="pageInfoModalTitle">
@@ -1267,81 +1291,101 @@
         const attributes = type.attributes || [];
         const step = stepForResolution(timeResolution);
         return `
-          <div class="action" data-work-type-id="${type.id}" style="padding:10px;">
-            <div class="row2">
-              <label>Nazwa typu zapisów
-                <input type="text" data-work-type-name value="${esc(type.name || "")}">
-              </label>
-              <button type="button" class="danger" data-remove-work-type>Usuń</button>
+          <details class="config-group nested-config-group" open>
+            <summary>Typ zapisów: ${esc(type.name || "Nowy typ")}</summary>
+            <div class="config-group-body">
+              <div class="action" data-work-type-id="${type.id}" style="padding:10px;">
+                <div class="row2">
+                  <label>Nazwa typu zapisów
+                    <input type="text" data-work-type-name value="${esc(type.name || "")}">
+                  </label>
+                  <button type="button" class="danger" data-remove-work-type>Usuń</button>
+                </div>
+                <div class="row2" style="margin-top:8px;">
+                  <label>Domyślny zakres od
+                    <input type="time" data-default-from value="${esc(defaults.from || "")}" step="${step}">
+                  </label>
+                  <label>Domyślny zakres do
+                    <input type="time" data-default-to value="${esc(defaults.to || "")}" step="${step}">
+                  </label>
+                </div>
+                <label style="margin-top:8px;">Domyślny opis
+                  <textarea data-default-description>${esc(defaults.description || "")}</textarea>
+                </label>
+                <label>Domyślne uwagi
+                  <textarea data-default-notes>${esc(defaults.notes || "")}</textarea>
+                </label>
+                <div class="small">Atrybuty typu</div>
+                <div style="display:grid;gap:8px;margin:8px 0;">
+                  ${attributes.map((attr) => renderAttributeEditor(attr)).join("")}
+                </div>
+                <button type="button" data-add-attribute>+ Dodaj atrybut</button>
+              </div>
             </div>
-            <div class="row2" style="margin-top:8px;">
-              <label>Domyślny zakres od
-                <input type="time" data-default-from value="${esc(defaults.from || "")}" step="${step}">
-              </label>
-              <label>Domyślny zakres do
-                <input type="time" data-default-to value="${esc(defaults.to || "")}" step="${step}">
-              </label>
-            </div>
-            <label style="margin-top:8px;">Domyślny opis
-              <textarea data-default-description>${esc(defaults.description || "")}</textarea>
-            </label>
-            <label>Domyślne uwagi
-              <textarea data-default-notes>${esc(defaults.notes || "")}</textarea>
-            </label>
-            <div class="small">Atrybuty typu</div>
-            <div style="display:grid;gap:8px;margin:8px 0;">
-              ${attributes.map((attr) => renderAttributeEditor(attr)).join("")}
-            </div>
-            <button type="button" data-add-attribute>+ Dodaj atrybut</button>
-          </div>
+          </details>
         `;
       }
 
       function renderAttributeEditor(attr) {
         return `
-          <div class="action" data-attribute-id="${attr.id}" style="padding:8px;">
-            <div class="row2">
-              <label>Nazwa atrybutu
-                <input type="text" data-attribute-name value="${esc(attr.label || attr.name || attr.id)}">
-              </label>
-              <button type="button" class="danger" data-remove-attribute>Usuń</button>
+          <details class="config-group nested-config-group" open>
+            <summary>Atrybut: ${esc(attr.label || attr.name || attr.id)}</summary>
+            <div class="config-group-body">
+              <div class="action" data-attribute-id="${attr.id}" style="padding:8px;">
+                <div class="row2">
+                  <label>Nazwa atrybutu
+                    <input type="text" data-attribute-name value="${esc(attr.label || attr.name || attr.id)}">
+                  </label>
+                  <button type="button" class="danger" data-remove-attribute>Usuń</button>
+                </div>
+                <label>Domyślna wartość
+                  <textarea data-attribute-default>${esc(attr.defaultValue || "")}</textarea>
+                </label>
+                <div class="small">Typ: textarea</div>
+              </div>
             </div>
-            <label>Domyślna wartość
-              <textarea data-attribute-default>${esc(attr.defaultValue || "")}</textarea>
-            </label>
-            <div class="small">Typ: textarea</div>
-          </div>
+          </details>
         `;
       }
 
       function renderCollaborationAttributeEditor(attr) {
         return `
-          <div class="action" data-collab-attr-id="${attr.id}" style="padding:8px;">
-            <div class="row2">
-              <label>Nazwa pola rekordu
-                <input type="text" data-collab-attr-name value="${esc(attr.label || attr.name || attr.id)}">
-              </label>
-              <button type="button" class="danger" data-remove-collab-attr>Usuń</button>
+          <details class="config-group nested-config-group" open>
+            <summary>Pole rekordu: ${esc(attr.label || attr.name || attr.id)}</summary>
+            <div class="config-group-body">
+              <div class="action" data-collab-attr-id="${attr.id}" style="padding:8px;">
+                <div class="row2">
+                  <label>Nazwa pola rekordu
+                    <input type="text" data-collab-attr-name value="${esc(attr.label || attr.name || attr.id)}">
+                  </label>
+                  <button type="button" class="danger" data-remove-collab-attr>Usuń</button>
+                </div>
+                <label>Domyślna wartość
+                  <textarea data-collab-attr-default>${esc(attr.defaultValue || "")}</textarea>
+                </label>
+                <div class="small">Typ: textarea</div>
+              </div>
             </div>
-            <label>Domyślna wartość
-              <textarea data-collab-attr-default>${esc(attr.defaultValue || "")}</textarea>
-            </label>
-            <div class="small">Typ: textarea</div>
-          </div>
+          </details>
         `;
       }
 
       function renderDayFieldEditor(field) {
         return `
-          <div class="action" data-day-field-id="${field.id}" style="padding:8px;">
-            <div class="row2">
-              <label>Etykieta pola
-                <input type="text" data-day-field-label value="${esc(field.label || field.id)}">
-              </label>
-              <button type="button" class="danger" data-remove-day-field>Usuń</button>
+          <details class="config-group nested-config-group" open>
+            <summary>Pole dnia: ${esc(field.label || field.id)}</summary>
+            <div class="config-group-body">
+              <div class="action" data-day-field-id="${field.id}" style="padding:8px;">
+                <div class="row2">
+                  <label>Etykieta pola
+                    <input type="text" data-day-field-label value="${esc(field.label || field.id)}">
+                  </label>
+                  <button type="button" class="danger" data-remove-day-field>Usuń</button>
+                </div>
+                <div class="small">Typ: textarea</div>
+              </div>
             </div>
-            <div class="small">Typ: textarea</div>
-          </div>
+          </details>
         `;
       }
 
@@ -1350,63 +1394,72 @@
         const dayFields = profile.config.dayFields || [];
         return `
           <article class="action" data-profile-id="${profile.id}" style="padding:12px;">
-            <div class="row2" style="margin-bottom:12px;">
-              <label>Nazwa profilu
-                <input type="text" data-profile-name value="${esc(profile.name)}">
-              </label>
-              <label>Rozdzielczość czasu
-                <select data-profile-resolution>
-                  <option value="minute" ${((profile.config.timeResolution || DEFAULT_RESOLUTION) === "minute") ? "selected" : ""}>Minuty</option>
-                  <option value="30m" ${((profile.config.timeResolution || DEFAULT_RESOLUTION) === "30m") ? "selected" : ""}>30 minut</option>
-                  <option value="hour" ${((profile.config.timeResolution || DEFAULT_RESOLUTION) === "hour") ? "selected" : ""}>Godziny</option>
-                </select>
-              </label>
-            </div>
-            <div class="row2" style="margin-bottom:12px;">
-              <label>Zakres dnia od
-                <input type="time" data-profile-work-from value="${esc(profile.config.workFrom || DEFAULT_WORK_FROM)}" step="${stepForResolution(profile.config.timeResolution || DEFAULT_RESOLUTION)}">
-              </label>
-              <label>Zakres dnia do
-                <input type="time" data-profile-work-to value="${esc(profile.config.workTo || DEFAULT_WORK_TO)}" step="${stepForResolution(profile.config.timeResolution || DEFAULT_RESOLUTION)}">
-              </label>
-            </div>
-            <div class="row2" style="margin-bottom:12px;">
-              <label>Ilość kart w rzędzie
-                <input type="number" min="1" max="6" step="1" data-profile-cards-per-row value="${esc(profile.config.cardsPerRow ?? 2)}">
-              </label>
-              <label>Cel godzin na miesiąc
-                <input type="number" min="0" step="1" data-profile-target-hours value="${esc(profile.config.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS)}">
-              </label>
-            </div>
-            <div class="row2" style="margin-bottom:12px;">
-              <label style="display:flex;align-items:center;gap:8px; height:100%;">
-                <input type="checkbox" data-profile-collapse-empty-days ${profile.config.collapseEmptyDaysByDefault ? "checked" : ""}>
-                <span>Zwijaj puste dni domyślnie</span>
-              </label>
-            </div>
+            <details class="config-group nested-config-group" open>
+              <summary>
+                <span class="config-item-title">
+                  <span>Profil: ${esc(profile.name || "Nowy profil")}</span>
+                </span>
+              </summary>
+              <div class="config-group-body">
+                <div class="row2" style="margin-bottom:12px;">
+                  <label>Nazwa profilu
+                    <input type="text" data-profile-name value="${esc(profile.name)}">
+                  </label>
+                  <label>Rozdzielczość czasu
+                    <select data-profile-resolution>
+                      <option value="minute" ${((profile.config.timeResolution || DEFAULT_RESOLUTION) === "minute") ? "selected" : ""}>Minuty</option>
+                      <option value="30m" ${((profile.config.timeResolution || DEFAULT_RESOLUTION) === "30m") ? "selected" : ""}>30 minut</option>
+                      <option value="hour" ${((profile.config.timeResolution || DEFAULT_RESOLUTION) === "hour") ? "selected" : ""}>Godziny</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="row2" style="margin-bottom:12px;">
+                  <label>Zakres dnia od
+                    <input type="time" data-profile-work-from value="${esc(profile.config.workFrom || DEFAULT_WORK_FROM)}" step="${stepForResolution(profile.config.timeResolution || DEFAULT_RESOLUTION)}">
+                  </label>
+                  <label>Zakres dnia do
+                    <input type="time" data-profile-work-to value="${esc(profile.config.workTo || DEFAULT_WORK_TO)}" step="${stepForResolution(profile.config.timeResolution || DEFAULT_RESOLUTION)}">
+                  </label>
+                </div>
+                <div class="row2" style="margin-bottom:12px;">
+                  <label>Ilość kart w rzędzie
+                    <input type="number" min="1" max="6" step="1" data-profile-cards-per-row value="${esc(profile.config.cardsPerRow ?? 2)}">
+                  </label>
+                  <label>Cel godzin na miesiąc
+                    <input type="number" min="0" step="1" data-profile-target-hours value="${esc(profile.config.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS)}">
+                  </label>
+                </div>
+                <div class="row2" style="margin-bottom:12px;">
+                  <label style="display:flex;align-items:center;gap:8px; height:100%;">
+                    <input type="checkbox" data-profile-collapse-empty-days ${profile.config.collapseEmptyDaysByDefault ? "checked" : ""}>
+                    <span>Zwijaj puste dni domyślnie</span>
+                  </label>
+                </div>
 
-            <div class="small">Typy wpisów pracy</div>
-            <div style="display:grid;gap:8px;margin:8px 0;">
-              ${workTypes.map((type) => renderWorkTypeEditor(type, profile.config.timeResolution || DEFAULT_RESOLUTION)).join("")}
-            </div>
-            <button type="button" data-add-work-type>+ Dodaj typ wpisu</button>
+                <div class="small">Typy wpisów pracy</div>
+                <div style="display:grid;gap:8px;margin:8px 0;">
+                  ${workTypes.map((type) => renderWorkTypeEditor(type, profile.config.timeResolution || DEFAULT_RESOLUTION)).join("")}
+                </div>
+                <button type="button" data-add-work-type>+ Dodaj typ wpisu</button>
 
-            <div class="small" style="margin-top:12px;">Pola dodatkowe w dniu</div>
-            <div style="display:grid;gap:8px;margin:8px 0;">
-              ${dayFields.map((field) => renderDayFieldEditor(field)).join("")}
-            </div>
-            <button type="button" data-add-day-field>+ Dodaj pole dnia</button>
+                <div class="small" style="margin-top:12px;">Pola dodatkowe w dniu</div>
+                <div style="display:grid;gap:8px;margin:8px 0;">
+                  ${dayFields.map((field) => renderDayFieldEditor(field)).join("")}
+                </div>
+                <button type="button" data-add-day-field>+ Dodaj pole dnia</button>
 
-            <div class="small" style="margin-top:12px;">Atrybuty rekordu współpracy</div>
-            <label style="margin-top:8px;">Tytuł sekcji
-              <input type="text" data-collab-record-title value="${esc((profile.config.collaborationRecords && profile.config.collaborationRecords.title) || "Współpraca z osobami")}">
-            </label>
-            <div style="display:grid;gap:8px;margin:8px 0;">
-              ${((profile.config.collaborationRecords && profile.config.collaborationRecords.attributes) || defaultCollaborationRecordAttributes()).map((attr) => renderCollaborationAttributeEditor(attr)).join("")}
-            </div>
-            <button type="button" data-add-collab-attribute>+ Dodaj atrybut rekordu</button>
+                <div class="small" style="margin-top:12px;">Atrybuty rekordu współpracy</div>
+                <label style="margin-top:8px;">Tytuł sekcji
+                  <input type="text" data-collab-record-title value="${esc((profile.config.collaborationRecords && profile.config.collaborationRecords.title) || "Współpraca z osobami")}">
+                </label>
+                <div style="display:grid;gap:8px;margin:8px 0;">
+                  ${((profile.config.collaborationRecords && profile.config.collaborationRecords.attributes) || defaultCollaborationRecordAttributes()).map((attr) => renderCollaborationAttributeEditor(attr)).join("")}
+                </div>
+                <button type="button" data-add-collab-attribute>+ Dodaj atrybut rekordu</button>
 
-            <button type="button" class="danger" data-remove-profile style="margin-top:12px;">Usuń profil</button>
+                <button type="button" class="danger" data-remove-profile style="margin-top:12px;">Usuń profil</button>
+              </div>
+            </details>
           </article>
         `;
       }
@@ -1416,63 +1469,72 @@
         const dayFields = project.config.dayFields || [];
         return `
           <article class="action" data-project-id="${project.id}" style="padding:12px;">
-            <div class="row2" style="margin-bottom:12px;">
-              <label>Nazwa projektu
-                <input type="text" data-project-name value="${esc(project.name)}">
-              </label>
-              <label>Rozdzielczość czasu
-                <select data-project-resolution>
-                  <option value="minute" ${((project.config.timeResolution || DEFAULT_RESOLUTION) === "minute") ? "selected" : ""}>Minuty</option>
-                  <option value="30m" ${((project.config.timeResolution || DEFAULT_RESOLUTION) === "30m") ? "selected" : ""}>30 minut</option>
-                  <option value="hour" ${((project.config.timeResolution || DEFAULT_RESOLUTION) === "hour") ? "selected" : ""}>Godziny</option>
-                </select>
-              </label>
-            </div>
-            <div class="row2" style="margin-bottom:12px;">
-              <label>Zakres dnia od
-                <input type="time" data-project-work-from value="${esc(project.config.workFrom || DEFAULT_WORK_FROM)}" step="${stepForResolution(project.config.timeResolution || DEFAULT_RESOLUTION)}">
-              </label>
-              <label>Zakres dnia do
-                <input type="time" data-project-work-to value="${esc(project.config.workTo || DEFAULT_WORK_TO)}" step="${stepForResolution(project.config.timeResolution || DEFAULT_RESOLUTION)}">
-              </label>
-            </div>
-            <div class="row2" style="margin-bottom:12px;">
-              <label>Ilość kart w rzędzie
-                <input type="number" min="1" max="6" step="1" data-project-cards-per-row value="${esc(project.config.cardsPerRow ?? 2)}">
-              </label>
-              <label>Cel godzin na miesiąc
-                <input type="number" min="0" step="1" data-project-target-hours value="${esc(project.config.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS)}">
-              </label>
-            </div>
-            <div class="row2" style="margin-bottom:12px;">
-              <label style="display:flex;align-items:center;gap:8px; height:100%;">
-                <input type="checkbox" data-project-collapse-empty-days ${project.config.collapseEmptyDaysByDefault ? "checked" : ""}>
-                <span>Zwijaj puste dni domyślnie</span>
-              </label>
-            </div>
+            <details class="config-group nested-config-group" open>
+              <summary>
+                <span class="config-item-title">
+                  <span>Projekt: ${esc(project.name || "Nowy projekt")}</span>
+                </span>
+              </summary>
+              <div class="config-group-body">
+                <div class="row2" style="margin-bottom:12px;">
+                  <label>Nazwa projektu
+                    <input type="text" data-project-name value="${esc(project.name)}">
+                  </label>
+                  <label>Rozdzielczość czasu
+                    <select data-project-resolution>
+                      <option value="minute" ${((project.config.timeResolution || DEFAULT_RESOLUTION) === "minute") ? "selected" : ""}>Minuty</option>
+                      <option value="30m" ${((project.config.timeResolution || DEFAULT_RESOLUTION) === "30m") ? "selected" : ""}>30 minut</option>
+                      <option value="hour" ${((project.config.timeResolution || DEFAULT_RESOLUTION) === "hour") ? "selected" : ""}>Godziny</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="row2" style="margin-bottom:12px;">
+                  <label>Zakres dnia od
+                    <input type="time" data-project-work-from value="${esc(project.config.workFrom || DEFAULT_WORK_FROM)}" step="${stepForResolution(project.config.timeResolution || DEFAULT_RESOLUTION)}">
+                  </label>
+                  <label>Zakres dnia do
+                    <input type="time" data-project-work-to value="${esc(project.config.workTo || DEFAULT_WORK_TO)}" step="${stepForResolution(project.config.timeResolution || DEFAULT_RESOLUTION)}">
+                  </label>
+                </div>
+                <div class="row2" style="margin-bottom:12px;">
+                  <label>Ilość kart w rzędzie
+                    <input type="number" min="1" max="6" step="1" data-project-cards-per-row value="${esc(project.config.cardsPerRow ?? 2)}">
+                  </label>
+                  <label>Cel godzin na miesiąc
+                    <input type="number" min="0" step="1" data-project-target-hours value="${esc(project.config.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS)}">
+                  </label>
+                </div>
+                <div class="row2" style="margin-bottom:12px;">
+                  <label style="display:flex;align-items:center;gap:8px; height:100%;">
+                    <input type="checkbox" data-project-collapse-empty-days ${project.config.collapseEmptyDaysByDefault ? "checked" : ""}>
+                    <span>Zwijaj puste dni domyślnie</span>
+                  </label>
+                </div>
 
-            <div class="small">Typy wpisów pracy</div>
-            <div style="display:grid;gap:8px;margin:8px 0;">
-              ${workTypes.map((type) => renderWorkTypeEditor(type, project.config.timeResolution || DEFAULT_RESOLUTION)).join("")}
-            </div>
-            <button type="button" data-add-work-type>+ Dodaj typ wpisu</button>
+                <div class="small">Typy wpisów pracy</div>
+                <div style="display:grid;gap:8px;margin:8px 0;">
+                  ${workTypes.map((type) => renderWorkTypeEditor(type, project.config.timeResolution || DEFAULT_RESOLUTION)).join("")}
+                </div>
+                <button type="button" data-add-work-type>+ Dodaj typ wpisu</button>
 
-            <div class="small" style="margin-top:12px;">Pola dodatkowe w dniu</div>
-            <div style="display:grid;gap:8px;margin:8px 0;">
-              ${dayFields.map((field) => renderDayFieldEditor(field)).join("")}
-            </div>
-            <button type="button" data-add-day-field>+ Dodaj pole dnia</button>
+                <div class="small" style="margin-top:12px;">Pola dodatkowe w dniu</div>
+                <div style="display:grid;gap:8px;margin:8px 0;">
+                  ${dayFields.map((field) => renderDayFieldEditor(field)).join("")}
+                </div>
+                <button type="button" data-add-day-field>+ Dodaj pole dnia</button>
 
-            <div class="small" style="margin-top:12px;">Atrybuty rekordu współpracy</div>
-            <label style="margin-top:8px;">Tytuł sekcji
-              <input type="text" data-collab-record-title value="${esc((project.config.collaborationRecords && project.config.collaborationRecords.title) || "Współpraca z osobami")}">
-            </label>
-            <div style="display:grid;gap:8px;margin:8px 0;">
-              ${((project.config.collaborationRecords && project.config.collaborationRecords.attributes) || defaultCollaborationRecordAttributes()).map((attr) => renderCollaborationAttributeEditor(attr)).join("")}
-            </div>
-            <button type="button" data-add-collab-attribute>+ Dodaj atrybut rekordu</button>
+                <div class="small" style="margin-top:12px;">Atrybuty rekordu współpracy</div>
+                <label style="margin-top:8px;">Tytuł sekcji
+                  <input type="text" data-collab-record-title value="${esc((project.config.collaborationRecords && project.config.collaborationRecords.title) || "Współpraca z osobami")}">
+                </label>
+                <div style="display:grid;gap:8px;margin:8px 0;">
+                  ${((project.config.collaborationRecords && project.config.collaborationRecords.attributes) || defaultCollaborationRecordAttributes()).map((attr) => renderCollaborationAttributeEditor(attr)).join("")}
+                </div>
+                <button type="button" data-add-collab-attribute>+ Dodaj atrybut rekordu</button>
 
-            <button type="button" class="danger" data-remove-project style="margin-top:12px;">Usuń projekt</button>
+                <button type="button" class="danger" data-remove-project style="margin-top:12px;">Usuń projekt</button>
+              </div>
+            </details>
           </article>
         `;
       }
@@ -1493,6 +1555,56 @@
         `;
       }
 
+      function showToast(message = "Zapisano zmiany") {
+        const host = document.querySelector("#saveToastHost");
+        if (!host) return;
+        const toast = document.createElement("div");
+        toast.className = "toast";
+        toast.textContent = message;
+        host.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add("show"));
+        window.setTimeout(() => {
+          toast.classList.remove("show");
+          window.setTimeout(() => toast.remove(), 220);
+        }, 2200);
+      }
+
+      function syncConfigSelectOptions() {
+        const config = db.config || createDefaultConfig();
+        const profiles = config.profiles || [];
+        const projects = config.projects || [];
+        const profileSelect = document.querySelector("#profileSelect");
+        if (profileSelect) {
+          const selectedProfileId = state.selectedProfileId || config.defaultProfileId || (profiles[0] && profiles[0].id) || null;
+          profileSelect.innerHTML = profiles.map((profile) => `
+            <option value="${profile.id}" ${profile.id === selectedProfileId ? "selected" : ""}>${esc(profile.name)}</option>
+          `).join("");
+          profileSelect.value = selectedProfileId;
+        }
+        const projectSelect = document.querySelector("#projectSelect");
+        if (projectSelect) {
+          const selectedProjectId = state.selectedProjectId || config.defaultProjectId || (projects[0] && projects[0].id) || null;
+          projectSelect.innerHTML = projects.map((project) => `
+            <option value="${project.id}" ${project.id === selectedProjectId ? "selected" : ""}>${esc(project.name)}</option>
+          `).join("");
+          projectSelect.value = selectedProjectId;
+        }
+        const defaultProfileSelect = document.querySelector("#defaultProfileSelect");
+        if (defaultProfileSelect) {
+          defaultProfileSelect.innerHTML = profiles.map((profile) => `
+            <option value="${profile.id}" ${config.defaultProfileId === profile.id ? "selected" : ""}>${esc(profile.name)}</option>
+          `).join("");
+          if (config.defaultProfileId) defaultProfileSelect.value = config.defaultProfileId;
+        }
+        const defaultProjectSelect = document.querySelector("#defaultProjectSelect");
+        if (defaultProjectSelect) {
+          defaultProjectSelect.innerHTML = projects.map((project) => `
+            <option value="${project.id}" ${config.defaultProjectId === project.id ? "selected" : ""}>${esc(project.name)}</option>
+          `).join("");
+          if (config.defaultProjectId) defaultProjectSelect.value = config.defaultProjectId;
+        }
+      }
+
       function renderConfigPage() {
         const config = db.config || createDefaultConfig();
         const profiles = config.profiles || [];
@@ -1509,126 +1621,127 @@
               <button id="backToCalendarBtn" class="primary" type="button">${labels.backToCalendar}</button>
             </div>
 
-            <section class="day" style="padding:16px;">
-              <div class="day-head" style="padding:0;border:none;background:none;margin-bottom:10px;">
-                <div class="day-title">${labels.globalSettings}</div>
-              </div>
-              <div class="row2">
-                <label>${labels.defaultProfile}
-                  <select id="defaultProfileSelect">
-                    ${(profiles || []).map((profile) => `
-                      <option value="${profile.id}" ${config.defaultProfileId === profile.id ? "selected" : ""}>${esc(profile.name)}</option>
-                    `).join("")}
-                  </select>
-                </label>
-                <label>${labels.defaultProject}
-                  <select id="defaultProjectSelect">
-                    ${(projects || []).map((project) => `
-                      <option value="${project.id}" ${config.defaultProjectId === project.id ? "selected" : ""}>${esc(project.name)}</option>
-                    `).join("")}
-                  </select>
-                </label>
-              </div>
-              <div class="row2" style="margin-top:10px;">
-                <label>${labels.timeResolution}
-                  <select id="globalResolutionSelect">
-                    <option value="minute" ${(globalCfg.timeResolution || DEFAULT_RESOLUTION) === "minute" ? "selected" : ""}>Minuty</option>
-                    <option value="30m" ${(globalCfg.timeResolution || DEFAULT_RESOLUTION) === "30m" ? "selected" : ""}>30 minut</option>
-                    <option value="hour" ${(globalCfg.timeResolution || DEFAULT_RESOLUTION) === "hour" ? "selected" : ""}>Godziny</option>
-                  </select>
-                </label>
-                <label>Ilość kart w rzędzie
-                  <input id="globalCardsPerRow" type="number" min="1" max="6" step="1" value="${esc(globalCfg.cardsPerRow ?? 2)}">
-                </label>
-              </div>
-              <div class="row2" style="margin-top:10px;">
-                <label>Cel godzin na miesiąc
-                  <input id="globalTargetHours" type="number" min="0" step="1" value="${esc(globalCfg.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS)}">
-                </label>
-                <label style="align-self:end;display:flex;align-items:center;gap:8px; height:100%;">
-                  <input id="globalCollapseEmptyDays" type="checkbox" ${globalCfg.collapseEmptyDaysByDefault ? "checked" : ""}>
-                  <span>Zwijaj puste dni automatycznie</span>
-                </label>
-              </div>
-              <div class="row2" style="margin-top:10px;">
-                <label>Domyślny zakres dnia
-                  <div class="row2" style="grid-template-columns:1fr 1fr;">
-                    <input id="globalWorkFrom" type="time" value="${esc(globalCfg.workFrom || DEFAULT_WORK_FROM)}" step="${stepForResolution(globalCfg.timeResolution || DEFAULT_RESOLUTION)}">
-                    <input id="globalWorkTo" type="time" value="${esc(globalCfg.workTo || DEFAULT_WORK_TO)}" step="${stepForResolution(globalCfg.timeResolution || DEFAULT_RESOLUTION)}">
-                  </div>
-                </label>
-              </div>
-              <div class="small" style="margin-top:10px;">Konfiguracja jest wersjonowana. Obecna wersja: ${config.version || DEFAULT_VERSION}</div>
-            </section>
-
-            <section class="day" style="padding:16px;">
-              <div class="day-head" style="padding:0;border:none;background:none;margin-bottom:10px;">
-                <div class="day-title">${labels.labelSectionTitle}</div>
-              </div>
-              <div class="small" style="margin-bottom:10px;">${labels.labelHints}</div>
-              <div style="display:grid;gap:10px;">
-                ${Object.entries((config.labels || createDefaultLabels())).map(([key, value]) => `
-                  <label>${esc(key)}
-                    <input type="text" data-label-key="${esc(key)}" value="${esc(value)}">
-                  </label>
-                `).join("")}
-              </div>
-            </section>
-
-            <section class="day" style="padding:16px;">
-              <div class="day-head" style="padding:0;border:none;background:none;margin-bottom:10px;">
-                <div class="day-title">${labels.pageInfoTitle || "Informacje o stronie"}</div>
-              </div>
-              <div style="display:grid;gap:10px;">
-                <label>Tytuł sekcji
-                  <input id="pageInfoTitleInput" type="text" value="${esc(pageInfo.title || "Informacje o stronie")}">
-                </label>
-                <label>Opis strony
-                  <textarea id="pageInfoSummaryInput">${esc(pageInfo.summary || "")}</textarea>
-                </label>
+            <details class="config-group" open>
+              <summary>${labels.globalSettings}</summary>
+              <div class="config-group-body">
                 <div class="row2">
-                  <label>Właściciel / autor
-                    <input id="pageInfoOwnerNameInput" type="text" value="${esc(pageInfo.ownerName || "")}">
+                  <label>${labels.defaultProfile}
+                    <select id="defaultProfileSelect">
+                      ${(profiles || []).map((profile) => `
+                        <option value="${profile.id}" ${config.defaultProfileId === profile.id ? "selected" : ""}>${esc(profile.name)}</option>
+                      `).join("")}
+                    </select>
                   </label>
-                  <label>Link do profilu
-                    <input id="pageInfoOwnerUrlInput" type="url" value="${esc(pageInfo.ownerUrl || "")}">
+                  <label>${labels.defaultProject}
+                    <select id="defaultProjectSelect">
+                      ${(projects || []).map((project) => `
+                        <option value="${project.id}" ${config.defaultProjectId === project.id ? "selected" : ""}>${esc(project.name)}</option>
+                      `).join("")}
+                    </select>
                   </label>
                 </div>
-                <label>Stopka strony
-                  <input id="pageInfoFooterTextInput" type="text" value="${esc(pageInfo.footerText || "")}">
-                </label>
-                <div>
-                  <div class="small" style="margin-bottom:8px;">${labels.aboutCardsLabel || "Karty o stronie"}</div>
-                  <div style="display:grid;gap:8px;">
-                    ${(pageInfo.cards || []).map((card) => renderAboutCardEditor(card)).join("")}
+                <div class="row2" style="margin-top:10px;">
+                  <label>${labels.timeResolution}
+                    <select id="globalResolutionSelect">
+                      <option value="minute" ${(globalCfg.timeResolution || DEFAULT_RESOLUTION) === "minute" ? "selected" : ""}>Minuty</option>
+                      <option value="30m" ${(globalCfg.timeResolution || DEFAULT_RESOLUTION) === "30m" ? "selected" : ""}>30 minut</option>
+                      <option value="hour" ${(globalCfg.timeResolution || DEFAULT_RESOLUTION) === "hour" ? "selected" : ""}>Godziny</option>
+                    </select>
+                  </label>
+                  <label>Ilość kart w rzędzie
+                    <input id="globalCardsPerRow" type="number" min="1" max="6" step="1" value="${esc(globalCfg.cardsPerRow ?? 2)}">
+                  </label>
+                </div>
+                <div class="row2" style="margin-top:10px;">
+                  <label>Cel godzin na miesiąc
+                    <input id="globalTargetHours" type="number" min="0" step="1" value="${esc(globalCfg.targetHoursPerMonth ?? DEFAULT_TARGET_HOURS)}">
+                  </label>
+                  <label style="align-self:end;display:flex;align-items:center;gap:8px; height:100%;">
+                    <input id="globalCollapseEmptyDays" type="checkbox" ${globalCfg.collapseEmptyDaysByDefault ? "checked" : ""}>
+                    <span>Zwijaj puste dni automatycznie</span>
+                  </label>
+                </div>
+                <div class="row2" style="margin-top:10px;">
+                  <label>Domyślny zakres dnia
+                    <div class="row2" style="grid-template-columns:1fr 1fr;">
+                      <input id="globalWorkFrom" type="time" value="${esc(globalCfg.workFrom || DEFAULT_WORK_FROM)}" step="${stepForResolution(globalCfg.timeResolution || DEFAULT_RESOLUTION)}">
+                      <input id="globalWorkTo" type="time" value="${esc(globalCfg.workTo || DEFAULT_WORK_TO)}" step="${stepForResolution(globalCfg.timeResolution || DEFAULT_RESOLUTION)}">
+                    </div>
+                  </label>
+                </div>
+                <div class="small" style="margin-top:10px;">Konfiguracja jest wersjonowana. Obecna wersja: ${config.version || DEFAULT_VERSION}</div>
+              </div>
+            </details>
+
+            <details class="config-group" open>
+              <summary>${labels.labelSectionTitle}</summary>
+              <div class="config-group-body">
+                <div class="small" style="margin-bottom:10px;">${labels.labelHints}</div>
+                <div style="display:grid;gap:10px;">
+                  ${Object.entries((config.labels || createDefaultLabels())).map(([key, value]) => `
+                    <label>${esc(key)}
+                      <input type="text" data-label-key="${esc(key)}" value="${esc(value)}">
+                    </label>
+                  `).join("")}
+                </div>
+              </div>
+            </details>
+
+            <details class="config-group" open>
+              <summary>${labels.pageInfoTitle || "Informacje o stronie"}</summary>
+              <div class="config-group-body">
+                <div style="display:grid;gap:10px;">
+                  <label>Tytuł sekcji
+                    <input id="pageInfoTitleInput" type="text" value="${esc(pageInfo.title || "Informacje o stronie")}">
+                  </label>
+                  <label>Opis strony
+                    <textarea id="pageInfoSummaryInput">${esc(pageInfo.summary || "")}</textarea>
+                  </label>
+                  <div class="row2">
+                    <label>Właściciel / autor
+                      <input id="pageInfoOwnerNameInput" type="text" value="${esc(pageInfo.ownerName || "")}">
+                    </label>
+                    <label>Link do profilu
+                      <input id="pageInfoOwnerUrlInput" type="url" value="${esc(pageInfo.ownerUrl || "")}">
+                    </label>
                   </div>
-                  <button type="button" id="addAboutCardBtn" style="margin-top:10px;">+ Dodaj kartę</button>
+                  <label>Stopka strony
+                    <input id="pageInfoFooterTextInput" type="text" value="${esc(pageInfo.footerText || "")}">
+                  </label>
+                  <div>
+                    <div class="small" style="margin-bottom:8px;">${labels.aboutCardsLabel || "Karty o stronie"}</div>
+                    <div style="display:grid;gap:8px;">
+                      ${(pageInfo.cards || []).map((card) => renderAboutCardEditor(card)).join("")}
+                    </div>
+                    <button type="button" id="addAboutCardBtn" style="margin-top:10px;">+ Dodaj kartę</button>
+                  </div>
                 </div>
               </div>
-            </section>
+            </details>
 
-            <section class="day" style="padding:16px;">
-              <div class="day-head" style="padding:0;border:none;background:none;margin-bottom:10px;">
-                <div class="day-title">${labels.profileSettings}</div>
+            <details class="config-group" open>
+              <summary>${labels.profileSettings}</summary>
+              <div class="config-group-body">
+                <div style="display:grid;gap:12px;">
+                  ${(profiles || []).map((profile) => renderProfileCard(profile)).join("")}
+                </div>
+                <button type="button" id="addProfileBtn" style="margin-top:10px;">${labels.addProfile}</button>
               </div>
-              <div style="display:grid;gap:12px;">
-                ${(profiles || []).map((profile) => renderProfileCard(profile)).join("")}
-              </div>
-              <button type="button" id="addProfileBtn" style="margin-top:10px;">${labels.addProfile}</button>
-            </section>
+            </details>
 
-            <section class="day" style="padding:16px;">
-              <div class="day-head" style="padding:0;border:none;background:none;margin-bottom:10px;">
-                <div class="day-title">${labels.projectSettings}</div>
+            <details class="config-group" open>
+              <summary>${labels.projectSettings}</summary>
+              <div class="config-group-body">
+                <div style="display:grid;gap:12px;">
+                  ${(projects || []).map((project) => renderProjectCard(project)).join("")}
+                </div>
+                <button type="button" id="addProjectBtn" style="margin-top:10px;">${labels.addProject}</button>
               </div>
-              <div style="display:grid;gap:12px;">
-                ${(projects || []).map((project) => renderProjectCard(project)).join("")}
-              </div>
-              <button type="button" id="addProjectBtn" style="margin-top:10px;">${labels.addProject}</button>
-            </section>
+            </details>
           </div>
         `;
 
+        syncConfigSelectOptions();
         $("#backToCalendarBtn").addEventListener("click", () => {
           state.configOpen = false;
           render();
@@ -1801,6 +1914,7 @@
           if (nameInput) {
             nameInput.addEventListener("input", () => {
               profile.name = nameInput.value || "Nowy profil";
+              syncConfigSelectOptions();
               saveDb();
             });
           }
@@ -2092,6 +2206,7 @@
           if (nameInput) {
             nameInput.addEventListener("input", () => {
               project.name = nameInput.value || "Nowy projekt";
+              syncConfigSelectOptions();
               saveDb();
             });
           }
@@ -2381,6 +2496,44 @@
         activeDay: null
       };
 
+      function bindConfigNotifications() {
+        const isConfigField = (target) => {
+          if (!target) return false;
+          if (target.closest("[data-profile-name], [data-project-name], [data-label-key], [data-profile-resolution], [data-project-resolution], [data-profile-work-from], [data-project-work-from], [data-profile-work-to], [data-project-work-to], [data-profile-target-hours], [data-project-target-hours], [data-profile-cards-per-row], [data-project-cards-per-row], [data-profile-collapse-empty-days], [data-project-collapse-empty-days], [data-add-work-type], [data-add-day-field], [data-add-collab-attribute], [data-remove-profile], [data-remove-project], [data-remove-work-type], [data-remove-day-field], [data-remove-collab-attr], [data-remove-attribute], [data-add-attribute], [data-remove-about-card], [data-add-about-card], [data-about-card-title], [data-about-card-body], #defaultProfileSelect, #defaultProjectSelect, #globalResolutionSelect, #globalCardsPerRow, #globalTargetHours, #globalCollapseEmptyDays, #globalWorkFrom, #globalWorkTo, #pageInfoTitleInput, #pageInfoSummaryInput, #pageInfoOwnerNameInput, #pageInfoOwnerUrlInput, #pageInfoFooterTextInput")) return true;
+          return target.matches("input, textarea, select, button") && state.configOpen;
+        };
+
+        document.addEventListener("input", (event) => {
+          if (!state.configOpen) return;
+          const target = event.target;
+          if (target && (target.matches("[data-profile-name], [data-project-name]") || target.closest("#defaultProfileSelect, #defaultProjectSelect"))) {
+            syncConfigSelectOptions();
+          }
+          if (isConfigField(target)) {
+            showToast("Zapisano zmiany");
+          }
+        });
+
+        document.addEventListener("change", (event) => {
+          if (!state.configOpen) return;
+          const target = event.target;
+          if (target && (target.matches("[data-profile-name], [data-project-name]") || target.closest("#defaultProfileSelect, #defaultProjectSelect"))) {
+            syncConfigSelectOptions();
+          }
+          if (isConfigField(target)) {
+            showToast("Zapisano zmiany");
+          }
+        });
+
+        document.addEventListener("click", (event) => {
+          if (!state.configOpen) return;
+          const target = event.target;
+          if (target && target.closest("button") && !target.closest("#backToCalendarBtn")) {
+            showToast("Zapisano zmiany");
+          }
+        });
+      }
+
       function bindPageInfoModal() {
         const modal = document.querySelector("#pageInfoModal");
         const button = document.querySelector("#pageInfoBtn");
@@ -2477,12 +2630,12 @@
       let db = loadDb();
 
       function initializeSelectors() {
-        const profileSelect = $("#profileSelect");
-        const projectSelect = $("#projectSelect");
         const config = db.config || createDefaultConfig();
         const labels = getLabels();
         state.selectedProfileId = config.defaultProfileId || (config.profiles[0] && config.profiles[0].id) || null;
         state.selectedProjectId = config.defaultProjectId || (config.projects[0] && config.projects[0].id) || null;
+        const profileSelect = $("#profileSelect");
+        const projectSelect = $("#projectSelect");
         if (document.querySelector("#appTitle")) document.querySelector("#appTitle").textContent = labels.title;
         if (document.querySelector("#monthLabelText")) document.querySelector("#monthLabelText").textContent = labels.month;
         if (document.querySelector("#profileLabelText")) document.querySelector("#profileLabelText").textContent = labels.profile;
@@ -2495,29 +2648,39 @@
         if (document.querySelector("#clearBtn")) document.querySelector("#clearBtn").textContent = labels.clearMonth;
 
         if (profileSelect) {
-          profileSelect.innerHTML = (config.profiles || []).map((profile) => `
-            <option value="${profile.id}" ${profile.id === state.selectedProfileId ? "selected" : ""}>${esc(profile.name)}</option>
-          `).join("");
-          profileSelect.value = state.selectedProfileId;
-          profileSelect.addEventListener("change", (event) => {
+          const renderProfileOptions = () => {
+            const selectedProfileId = state.selectedProfileId || config.defaultProfileId || (config.profiles[0] && config.profiles[0].id) || null;
+            profileSelect.innerHTML = (config.profiles || []).map((profile) => `
+              <option value="${profile.id}" ${profile.id === selectedProfileId ? "selected" : ""}>${esc(profile.name)}</option>
+            `).join("");
+            profileSelect.value = selectedProfileId;
+          };
+          renderProfileOptions();
+          profileSelect.onchange = (event) => {
             state.selectedProfileId = event.target.value;
             db.config.defaultProfileId = event.target.value;
             saveDb();
+            syncConfigSelectOptions();
             render();
-          });
+          };
         }
 
         if (projectSelect) {
-          projectSelect.innerHTML = (config.projects || []).map((project) => `
-            <option value="${project.id}" ${project.id === state.selectedProjectId ? "selected" : ""}>${esc(project.name)}</option>
-          `).join("");
-          projectSelect.value = state.selectedProjectId;
-          projectSelect.addEventListener("change", (event) => {
+          const renderProjectOptions = () => {
+            const selectedProjectId = state.selectedProjectId || config.defaultProjectId || (config.projects[0] && config.projects[0].id) || null;
+            projectSelect.innerHTML = (config.projects || []).map((project) => `
+              <option value="${project.id}" ${project.id === selectedProjectId ? "selected" : ""}>${esc(project.name)}</option>
+            `).join("");
+            projectSelect.value = selectedProjectId;
+          };
+          renderProjectOptions();
+          projectSelect.onchange = (event) => {
             state.selectedProjectId = event.target.value;
             db.config.defaultProjectId = event.target.value;
             saveDb();
+            syncConfigSelectOptions();
             render();
-          });
+          };
         }
 
         const optionsBtn = $("#optionsBtn");
@@ -2600,6 +2763,7 @@
 
       $("#monthPicker").value = currentMonth;
       bindPageInfoModal();
+      bindConfigNotifications();
       initializeSelectors();
       render();
     })();
