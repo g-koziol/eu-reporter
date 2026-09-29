@@ -168,8 +168,5 @@ export function exportMonthPdf(context) {
     </style>
   </head><body>${reportHtml}</body></html>`);
   doc.close();
-  setTimeout(() => {
-    printWindow.focus();
-    printWindow.print();
-  }, 250);
+  printWindow.focus();
 }
