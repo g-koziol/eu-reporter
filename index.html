@@ -226,9 +226,13 @@
     .nested-config-group > summary { background: #fff; font-size: .92rem; }
     .config-item-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     @media (max-width:700px){
-      :root { --day-nav-top: 0px; }
+      :root {
+        --day-nav-top: 0px;
+        --calendar-cards-per-row: 1;
+      }
       header { position: static; }
       .day-nav { top: 0; }
+      .week { grid-template-columns: 1fr; }
       .stats { grid-template-columns: 1fr; }
       .action-top, .row2 { grid-template-columns: 1fr; }
       .day-range-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
