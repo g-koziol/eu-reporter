@@ -759,11 +759,13 @@
               document.querySelectorAll(".day").forEach((dayCard) => {
                 dayCard.classList.toggle("is-focused", dayCard.dataset.date === key);
               });
+              navStrip.querySelectorAll("[data-day-nav]").forEach((dayButton) => {
+                dayButton.classList.toggle("active", dayButton.dataset.dayNav === key);
+              });
               const target = document.querySelector(`.day[data-date="${key}"]`);
               if (target) {
                 target.scrollIntoView({ behavior: "smooth", block: "center" });
               }
-              render();
             });
           });
         }
