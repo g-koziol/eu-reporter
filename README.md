@@ -9,7 +9,13 @@ npm install
 npm start
 ```
 
-Otwórz adres wyświetlony przez Angular CLI. Wersję produkcyjną można zbudować poleceniem `npm run build`; pliki wynikowe znajdują się w `dist/eu-reporter/`.
+Otwórz adres wyświetlony przez Angular CLI. Wersję produkcyjną można zbudować poleceniem `npm run build`; pliki wynikowe znajdują się w `dist/eu-reporter/browser/`.
+
+## Publikacja w GitHub Pages
+
+Workflow GitHub Actions w `.github/workflows/deploy.yml` buduje aplikację przy zmianach na `main` i przy pull requestach do `main`. Po scaleniu do `main` publikuje ją pod adresem https://g-koziol.github.io/eu-reporter/.
+
+Przed pierwszą publikacją w ustawieniach repozytorium wybierz **Settings → Pages → Build and deployment → Source → GitHub Actions**. Workflow można również uruchomić ręcznie z zakładki **Actions**. Budowanie ustawia ścieżkę bazową `/eu-reporter/`, wymaganą dla strony projektu GitHub Pages.
 
 ## Dane i kopie zapasowe
 
