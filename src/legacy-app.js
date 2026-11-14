@@ -268,7 +268,7 @@
             <div class="modal-head">
               <div>
                 <div class="small">Masowe dodawanie wpisów</div>
-                <h3 id="batchModalTitle" style="margin:4px 0 0;">Dodaj wpisy dla ${currentMonth}</h3>
+                <h3 id="batchModalTitle" style="margin:4px 0 0;">Dodaj wpisy dla ${esc(currentMonth)}</h3>
               </div>
               <button type="button" id="closeBatchModalBtn" aria-label="Zamknij">✕</button>
             </div>
@@ -963,7 +963,7 @@
 
         const doc = printWindow.document;
         doc.open();
-        doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Raport ${currentMonth}</title>
+        doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Raport ${esc(currentMonth)}</title>
           <style>
             body { margin: 18px; font-family: Arial, sans-serif; color: #111827; background: #fff; }
             .pdf-report { color: #111827; }
