@@ -20,6 +20,7 @@ test('creates an activity and restores it after reload', async ({ page }) => {
   await expect(restoredDay.locator('details summary').first()).toContainText('Działania w ciągu dnia (1)');
 });
 
+
 test('adds a profile from the configuration page', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: '⋯' }).click();
@@ -87,5 +88,42 @@ test('stores a project dictionary value and selects it from a day field', async 
     fieldKey: 'day.area',
     values: ['Wsparcie w szkole']
   });
+  expect(pageErrors).toEqual([]);
+});
+
+test('rejects malformed JSON imports without crashing the calendar', async ({ page }) => {
+  const pageErrors: string[] = [];
+  const dialogs: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  page.on('dialog', async (dialog) => {
+    dialogs.push(dialog.message());
+    await dialog.accept();
+  });
+
+  await page.goto('/');
+  const month = await page.locator('input[type="month"]').inputValue();
+  const profileId = await page.locator('app-reporter-toolbar select').nth(0).inputValue();
+  const projectId = await page.locator('app-reporter-toolbar select').nth(1).inputValue();
+  const malformedImport = {
+    config: {},
+    months: {
+      [month]: {
+        [profileId]: {
+          [projectId]: { days: [] }
+        }
+      }
+    }
+  };
+  await page.getByRole('button', { name: '⋯' }).click();
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'malformed.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(malformedImport))
+  });
+
+  await expect.poll(() => dialogs).toContain('Import zastąpi bieżącą konfigurację i wszystkie lokalnie zapisane dane. Czy kontynuować?');
+  await expect.poll(() => dialogs.length).toBe(2);
+  await expect.poll(() => dialogs[1]).toContain('Nieprawidłowa struktura danych miesięcznych');
+  await expect(page.locator('app-calendar-view')).toBeVisible();
   expect(pageErrors).toEqual([]);
 });

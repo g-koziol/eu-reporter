@@ -13,6 +13,7 @@ describe('ReporterStateService', () => {
     state.selectedProjectId = state.config.defaultProjectId;
   });
 
+
   it('resolves effective settings from project, profile, and global defaults', () => {
     state.selectedProfile.config.timeResolution = '30m';
     state.selectedProject.config.timeResolution = 'hour';
@@ -36,5 +37,37 @@ describe('ReporterStateService', () => {
     expect(state.totalActions).toBe(5);
     expect(state.allMonthDays.every(({ day }) => Array.isArray(day.actions))).toBe(true);
     expect(state.totalMinutes).toBe(300);
+  });
+
+  it('rejects malformed imported month data without replacing the current database', () => {
+    const currentDatabase = state.db;
+
+    expect(() => state.replaceDatabase({
+      config: state.config,
+      months: {
+        [state.currentMonth]: {
+          [state.selectedProfileId as string]: {
+            [state.selectedProjectId as string]: { days: [] }
+          }
+        }
+      }
+    })).toThrow('Nieprawidłowa struktura danych miesięcznych');
+    expect(state.db).toBe(currentDatabase);
+  });
+
+  it('initializes missing days when importing an otherwise valid month bucket', () => {
+    const incoming = {
+      config: state.config,
+      months: {
+        [state.currentMonth]: {
+          [state.selectedProfileId as string]: {
+            [state.selectedProjectId as string]: {}
+          }
+        }
+      }
+    };
+
+    expect(() => state.replaceDatabase(incoming)).not.toThrow();
+    expect(state.dayFor(`${state.currentMonth}-01`).actions).toEqual([]);
   });
 });
