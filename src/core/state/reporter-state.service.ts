@@ -20,6 +20,31 @@ import { actionMinutes, iso, monthGrid, normalizeResolution, roundTime, timeToMi
 const WEEKDAYS = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
 const BUILTIN_DAY_FIELDS = ['area', 'nextPlan', 'risks', 'notes'];
 
+function isRecord(value: unknown): value is Record<string, any> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function validateMonths(value: unknown): Record<string, any> {
+  if (!isRecord(value)) throw new Error('Nieprawidłowa struktura danych miesięcznych');
+
+  for (const month of Object.values(value)) {
+    if (!isRecord(month)) throw new Error('Nieprawidłowa struktura danych miesięcznych');
+    for (const profile of Object.values(month)) {
+      if (!isRecord(profile)) throw new Error('Nieprawidłowa struktura danych miesięcznych');
+      for (const project of Object.values(profile)) {
+        if (!isRecord(project) || (project['days'] !== undefined && !isRecord(project['days']))) {
+          throw new Error('Nieprawidłowa struktura danych miesięcznych');
+        }
+        for (const day of Object.values(project['days'] || {})) {
+          if (!isRecord(day)) throw new Error('Nieprawidłowa struktura danych miesięcznych');
+        }
+      }
+    }
+  }
+
+  return value;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ReporterStateService {
   db: any = createDefaultDb();
@@ -186,7 +211,8 @@ export class ReporterStateService {
   }
 
   replaceDatabase(incoming: any): void {
-    this.db = { version: DEFAULT_VERSION, config: normalizeConfig(incoming.config || incoming), months: incoming.months };
+    const months = validateMonths(incoming.months);
+    this.db = { version: DEFAULT_VERSION, config: normalizeConfig(incoming.config || incoming), months };
     this.selectedProfileId = this.config.defaultProfileId || this.config.profiles[0]?.id || null;
     this.selectedProjectId = this.config.defaultProjectId || this.config.projects[0]?.id || null;
     this.refreshMonth();
@@ -209,7 +235,9 @@ export class ReporterStateService {
     this.db.months[this.currentMonth] ||= {};
     this.db.months[this.currentMonth][this.selectedProfileId as string] ||= {};
     this.db.months[this.currentMonth][this.selectedProfileId as string][this.selectedProjectId as string] ||= { days: {} };
-    return this.db.months[this.currentMonth][this.selectedProfileId as string][this.selectedProjectId as string];
+    const bucket = this.db.months[this.currentMonth][this.selectedProfileId as string][this.selectedProjectId as string];
+    bucket.days ||= {};
+    return bucket;
   }
 
   private ensureMonthDays(): void {
