@@ -1,0 +1,56 @@
+<header>
+    <div class="wrap">
+      <div class="toolbar">
+        <strong id="appTitle">Ewidencja działań projektowych</strong>
+        <button id="pageInfoBtn" class="page-info-btn" type="button" aria-label="Pokaż informacje o stronie">i</button>
+        <label style="width:auto"><span id="monthLabelText">Miesiąc</span>
+          <input id="monthPicker" type="month" style="width:auto">
+        </label>
+        <label style="width:auto"><span id="profileLabelText">Profil</span>
+          <select id="profileSelect" style="width:auto"></select>
+        </label>
+        <label style="width:auto"><span id="projectLabelText">Projekt</span>
+          <select id="projectSelect" style="width:auto"></select>
+        </label>
+        <div class="toolbar-menu">
+          <button id="optionsBtn" class="primary" type="button" aria-expanded="false">⋯</button>
+          <div id="optionsMenu" class="toolbar-menu-panel hidden" role="menu" aria-label="Dodatkowe opcje">
+            <button id="configBtn" type="button">Konfiguracja</button>
+            <button id="exportBtn" type="button">Eksport JSON</button>
+            <button id="exportPdfBtn" type="button">Eksport PDF</button>
+            <label class="btn"><span id="importLabelText">Import JSON</span>
+              <input id="importInput" type="file" accept="application/json,.json" class="hidden">
+            </label>
+            <button id="clearBtn" class="danger" type="button">Wyczyść bieżący miesiąc</button>
+          </div>
+        </div>
+      </div>
+      <div id="limitBox">
+        <div class="stats">
+          <div class="stat">Wypracowano <b id="totalHours">0:00 h</b></div>
+          <div class="stat"><span id="remainingTargetLabel">Pozostało do 100 h</span> <b id="remainingHours">100:00 h</b></div>
+          <div class="stat">Liczba działań <b id="actionCount">0</b></div>
+        </div>
+        <div class="progress"><div id="progressBar"></div></div>
+      </div>
+      <div class="footer-note">Dane zapisują się automatycznie w tej przeglądarce (IndexedDB) i pozostają dostępne przy ponownym wejściu, o ile dane witryny nie zostaną wyczyszczone. Eksport JSON służy jako kopia zapasowa i do przenoszenia danych.</div>
+    </div>
+  </header>
+
+  <main class="wrap weeks" id="calendar"></main>
+
+  <footer class="page-footer" id="pageFooter"></footer>
+  <div id="saveToastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
+
+  <div id="pageInfoModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="pageInfoModalTitle">
+      <div class="modal-head">
+        <div>
+          <div class="small">O aplikacji</div>
+          <h3 id="pageInfoModalTitle" style="margin:4px 0 0;">Informacje o stronie</h3>
+        </div>
+        <button type="button" id="closePageInfoModalBtn" aria-label="Zamknij">✕</button>
+      </div>
+      <div id="pageInfoModalContent"></div>
+    </div>
+  </div>
