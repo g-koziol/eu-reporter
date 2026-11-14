@@ -1,56 +1,271 @@
-<header>
+@if (!ready) {
+  <main class="wrap weeks"><p>Wczytywanie danych…</p></main>
+} @else {
+  <header>
     <div class="wrap">
       <div class="toolbar">
-        <strong id="appTitle">Ewidencja działań projektowych</strong>
-        <button id="pageInfoBtn" class="page-info-btn" type="button" aria-label="Pokaż informacje o stronie">i</button>
-        <label style="width:auto"><span id="monthLabelText">Miesiąc</span>
-          <input id="monthPicker" type="month" style="width:auto">
+        <strong>{{ labels.title }}</strong>
+        <button class="page-info-btn" type="button" aria-label="Pokaż informacje o stronie" (click)="pageInfoOpen = true">i</button>
+        <label style="width:auto">{{ labels.month }}
+          <input type="month" style="width:auto" [ngModel]="currentMonth" (ngModelChange)="changeMonth($event)">
         </label>
-        <label style="width:auto"><span id="profileLabelText">Profil</span>
-          <select id="profileSelect" style="width:auto"></select>
+        <label style="width:auto">{{ labels.profile }}
+          <select style="width:auto" [ngModel]="selectedProfileId" (ngModelChange)="changeProfile($event)">
+            @for (profile of config.profiles; track profile.id) { <option [value]="profile.id">{{ profile.name }}</option> }
+          </select>
         </label>
-        <label style="width:auto"><span id="projectLabelText">Projekt</span>
-          <select id="projectSelect" style="width:auto"></select>
+        <label style="width:auto">{{ labels.project }}
+          <select style="width:auto" [ngModel]="selectedProjectId" (ngModelChange)="changeProject($event)">
+            @for (project of config.projects; track project.id) { <option [value]="project.id">{{ project.name }}</option> }
+          </select>
         </label>
         <div class="toolbar-menu">
-          <button id="optionsBtn" class="primary" type="button" aria-expanded="false">⋯</button>
-          <div id="optionsMenu" class="toolbar-menu-panel hidden" role="menu" aria-label="Dodatkowe opcje">
-            <button id="configBtn" type="button">Konfiguracja</button>
-            <button id="exportBtn" type="button">Eksport JSON</button>
-            <button id="exportPdfBtn" type="button">Eksport PDF</button>
-            <label class="btn"><span id="importLabelText">Import JSON</span>
-              <input id="importInput" type="file" accept="application/json,.json" class="hidden">
-            </label>
-            <button id="clearBtn" class="danger" type="button">Wyczyść bieżący miesiąc</button>
-          </div>
+          <button class="primary" type="button" aria-expanded="{{ optionsOpen }}" (click)="optionsOpen = !optionsOpen">⋯</button>
+          @if (optionsOpen) {
+            <div class="toolbar-menu-panel" role="menu" aria-label="Dodatkowe opcje">
+              <button type="button" (click)="configOpen = true; optionsOpen = false">{{ labels.config }}</button>
+              <button type="button" (click)="exportJson()">{{ labels.exportJson }}</button>
+              <button type="button" (click)="exportPdf()">{{ labels.exportPdf }}</button>
+              <label class="btn">{{ labels.importJson }}
+                <input type="file" accept="application/json,.json" class="hidden" (change)="importJson($event)">
+              </label>
+              <button class="danger" type="button" (click)="clearMonth()">{{ labels.clearMonth }}</button>
+            </div>
+          }
         </div>
       </div>
-      <div id="limitBox">
+      <div [class.limit-over]="totalMinutes > targetHours * 60">
         <div class="stats">
-          <div class="stat">Wypracowano <b id="totalHours">0:00 h</b></div>
-          <div class="stat"><span id="remainingTargetLabel">Pozostało do 100 h</span> <b id="remainingHours">100:00 h</b></div>
-          <div class="stat">Liczba działań <b id="actionCount">0</b></div>
+          <div class="stat">Wypracowano <b>{{ fmtMin(totalMinutes) }}</b></div>
+          <div class="stat"><span>Pozostało do {{ targetHours }} h</span> <b>{{ fmtMin(remainingMinutes) }}</b></div>
+          <div class="stat">Liczba działań <b>{{ totalActions }}</b></div>
         </div>
-        <div class="progress"><div id="progressBar"></div></div>
+        <div class="progress"><div [style.width.%]="progress"></div></div>
       </div>
       <div class="footer-note">Dane zapisują się automatycznie w tej przeglądarce (IndexedDB) i pozostają dostępne przy ponownym wejściu, o ile dane witryny nie zostaną wyczyszczone. Eksport JSON służy jako kopia zapasowa i do przenoszenia danych.</div>
     </div>
   </header>
 
-  <main class="wrap weeks" id="calendar"></main>
-
-  <footer class="page-footer" id="pageFooter"></footer>
-  <div id="saveToastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
-
-  <div id="pageInfoModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="pageInfoModalTitle">
-      <div class="modal-head">
-        <div>
-          <div class="small">O aplikacji</div>
-          <h3 id="pageInfoModalTitle" style="margin:4px 0 0;">Informacje o stronie</h3>
-        </div>
-        <button type="button" id="closePageInfoModalBtn" aria-label="Zamknij">✕</button>
+  @if (configOpen) {
+    <main class="wrap config-page">
+      <div class="config-page-head">
+        <h2>{{ labels.config }}</h2>
+        <button class="primary" type="button" (click)="configOpen = false">{{ labels.backToCalendar }}</button>
       </div>
-      <div id="pageInfoModalContent"></div>
+      <details class="config-group" open>
+        <summary>{{ labels.globalSettings }}</summary>
+        <div class="config-group-body">
+          <div class="row2">
+            <label>{{ labels.defaultProfile }}
+              <select [(ngModel)]="config.defaultProfileId" (ngModelChange)="changeProfile($event)">
+                @for (profile of config.profiles; track profile.id) { <option [value]="profile.id">{{ profile.name }}</option> }
+              </select>
+            </label>
+            <label>{{ labels.defaultProject }}
+              <select [(ngModel)]="config.defaultProjectId" (ngModelChange)="changeProject($event)">
+                @for (project of config.projects; track project.id) { <option [value]="project.id">{{ project.name }}</option> }
+              </select>
+            </label>
+          </div>
+          <div class="row2">
+            <label>{{ labels.timeResolution }}
+              <select [(ngModel)]="config.global.timeResolution" (ngModelChange)="onConfigChange()">
+                <option value="minute">Minuty</option><option value="30m">30 minut</option><option value="hour">Godziny</option>
+              </select>
+            </label>
+            <label>Ilość kart w rzędzie
+              <input type="number" min="1" max="6" [(ngModel)]="config.global.cardsPerRow" (ngModelChange)="onConfigChange()">
+            </label>
+          </div>
+          <div class="row2">
+            <label>Cel godzin na miesiąc
+              <input type="number" min="0" [(ngModel)]="config.global.targetHoursPerMonth" (ngModelChange)="onConfigChange()">
+            </label>
+            <label>Domyślny zakres dnia
+              <div class="row2"><input type="time" [(ngModel)]="config.global.workFrom" (ngModelChange)="onConfigChange()"><input type="time" [(ngModel)]="config.global.workTo" (ngModelChange)="onConfigChange()"></div>
+            </label>
+          </div>
+          <label class="checkbox-label"><input type="checkbox" [(ngModel)]="config.global.collapseEmptyDaysByDefault" (ngModelChange)="onConfigChange()"> Zwijaj puste dni automatycznie</label>
+        </div>
+      </details>
+
+      <details class="config-group" open>
+        <summary>{{ labels.labelSectionTitle }}</summary>
+        <div class="config-group-body">
+          <div class="small">{{ labels.labelHints }}</div>
+          @for (key of objectKeys(config.labels); track key) {
+            <label>{{ key }}<input [(ngModel)]="config.labels[key]" (ngModelChange)="onConfigChange()"></label>
+          }
+        </div>
+      </details>
+
+      <details class="config-group" open>
+        <summary>{{ pageInfo.title || labels.pageInfoTitle }}</summary>
+        <div class="config-group-body">
+          <label>Tytuł sekcji<input [(ngModel)]="config.pageInfo.title" (ngModelChange)="onConfigChange()"></label>
+          <label>Opis strony<textarea [(ngModel)]="config.pageInfo.summary" (ngModelChange)="onConfigChange()"></textarea></label>
+          <div class="row2">
+            <label>Właściciel / autor<input [(ngModel)]="config.pageInfo.ownerName" (ngModelChange)="onConfigChange()"></label>
+            <label>Link do profilu<input type="url" [(ngModel)]="config.pageInfo.ownerUrl" (ngModelChange)="onConfigChange()"></label>
+          </div>
+          <label>Stopka strony<input [(ngModel)]="config.pageInfo.footerText" (ngModelChange)="onConfigChange()"></label>
+          <h3>{{ labels.aboutCardsLabel }}</h3>
+          @for (card of config.pageInfo.cards; track card.id; let index = $index) {
+            <div class="action">
+              <label>Tytuł<input [(ngModel)]="card.title" (ngModelChange)="onConfigChange()"></label>
+              <label>Treść<textarea [(ngModel)]="card.body" (ngModelChange)="onConfigChange()"></textarea></label>
+              <button class="danger" type="button" (click)="removeItem(config.pageInfo.cards, index)">Usuń kartę</button>
+            </div>
+          }
+          <button type="button" (click)="addAboutCard()">+ Dodaj kartę</button>
+        </div>
+      </details>
+
+      <details class="config-group" open>
+        <summary>{{ labels.profileSettings }}</summary>
+        <div class="config-group-body">
+          @for (profile of config.profiles; track profile.id; let index = $index) {
+            <ng-container *ngTemplateOutlet="ownerSettings; context: {$implicit: profile, type: 'profile', index: index}"></ng-container>
+          }
+          <button type="button" (click)="addProfile()">{{ labels.addProfile }}</button>
+        </div>
+      </details>
+
+      <details class="config-group" open>
+        <summary>{{ labels.projectSettings }}</summary>
+        <div class="config-group-body">
+          @for (project of config.projects; track project.id; let index = $index) {
+            <ng-container *ngTemplateOutlet="ownerSettings; context: {$implicit: project, type: 'project', index: index}"></ng-container>
+          }
+          <button type="button" (click)="addProject()">{{ labels.addProject }}</button>
+        </div>
+      </details>
+
+      <ng-template #ownerSettings let-owner let-type="type" let-index="index">
+        <details class="config-group" open>
+          <summary>{{ type === 'profile' ? 'Profil' : 'Projekt' }}: {{ owner.name }}</summary>
+          <div class="config-group-body">
+            <label>Nazwa<input [(ngModel)]="owner.name" (ngModelChange)="onConfigChange()"></label>
+            <div class="row2">
+              <label>{{ labels.timeResolution }}
+                <select [(ngModel)]="owner.config.timeResolution" (ngModelChange)="onConfigChange()"><option value="minute">Minuty</option><option value="30m">30 minut</option><option value="hour">Godziny</option></select>
+              </label>
+              <label>Cel godzin na miesiąc<input type="number" min="0" [(ngModel)]="owner.config.targetHoursPerMonth" (ngModelChange)="onConfigChange()"></label>
+            </div>
+            <div class="row2">
+              <label>Domyślny zakres od<input type="time" [(ngModel)]="owner.config.workFrom" (ngModelChange)="onConfigChange()"></label>
+              <label>Domyślny zakres do<input type="time" [(ngModel)]="owner.config.workTo" (ngModelChange)="onConfigChange()"></label>
+            </div>
+            <label>Liczba kart w rzędzie<input type="number" min="1" max="6" [(ngModel)]="owner.config.cardsPerRow" (ngModelChange)="onConfigChange()"></label>
+            <label class="checkbox-label"><input type="checkbox" [(ngModel)]="owner.config.collapseEmptyDaysByDefault" (ngModelChange)="onConfigChange()"> Zwijaj puste dni automatycznie</label>
+
+            <h4>Typy działań</h4>
+            @for (workType of owner.config.workTypes; track workType.id; let typeIndex = $index) {
+              <details class="config-group">
+                <summary>{{ workType.name }}</summary>
+                <div class="config-group-body">
+                  <label>Nazwa typu<input [(ngModel)]="workType.name" (ngModelChange)="onConfigChange()"></label>
+                  <div class="row2"><label>Domyślnie od<input type="time" [(ngModel)]="workType.defaultValues.from" (ngModelChange)="onConfigChange()"></label><label>Domyślnie do<input type="time" [(ngModel)]="workType.defaultValues.to" (ngModelChange)="onConfigChange()"></label></div>
+                  <label>Domyślny opis<textarea [(ngModel)]="workType.defaultValues.description" (ngModelChange)="onConfigChange()"></textarea></label>
+                  <label>Domyślne uwagi<textarea [(ngModel)]="workType.defaultValues.notes" (ngModelChange)="onConfigChange()"></textarea></label>
+                  <h5>Atrybuty typu</h5>
+                  @for (attribute of workType.attributes; track attribute.id; let attributeIndex = $index) {
+                    <div class="row2">
+                      <label>Etykieta<input [(ngModel)]="attribute.label" (ngModelChange)="onConfigChange()"></label>
+                      <label>Wartość domyślna<textarea [(ngModel)]="attribute.defaultValue" (ngModelChange)="onConfigChange()"></textarea></label>
+                      <button class="danger" type="button" (click)="removeItem(workType.attributes, attributeIndex)">Usuń</button>
+                    </div>
+                  }
+                  <button type="button" (click)="addWorkTypeAttribute(workType)">{{ labels.addAttribute }}</button>
+                  <button class="danger" type="button" (click)="removeWorkType(owner.config.workTypes, typeIndex)">Usuń typ</button>
+                </div>
+              </details>
+            }
+            <button type="button" (click)="addWorkType(owner)">{{ labels.addWorkType }}</button>
+
+            <h4>Pola dnia</h4>
+            @for (field of owner.config.dayFields; track field.id; let fieldIndex = $index) {
+              <div class="row2">
+                <label>Etykieta<input [(ngModel)]="field.label" (ngModelChange)="onConfigChange()"></label>
+                <label>Wartość domyślna<textarea [(ngModel)]="field.defaultValue" (ngModelChange)="onConfigChange()"></textarea></label>
+                @if (!builtinField(field.id)) { <button class="danger" type="button" (click)="removeItem(owner.config.dayFields, fieldIndex)">Usuń</button> }
+              </div>
+            }
+            <button type="button" (click)="addDayField(owner.config)">{{ labels.addDayField }}</button>
+
+            <h4>Rekordy współpracy</h4>
+            <label>Tytuł sekcji<input [(ngModel)]="owner.config.collaborationRecords.title" (ngModelChange)="onConfigChange()"></label>
+            @for (attribute of owner.config.collaborationRecords.attributes; track attribute.id; let attributeIndex = $index) {
+              <div class="row2">
+                <label>Etykieta<input [(ngModel)]="attribute.label" (ngModelChange)="onConfigChange()"></label>
+                <label>Wartość domyślna<textarea [(ngModel)]="attribute.defaultValue" (ngModelChange)="onConfigChange()"></textarea></label>
+                <button class="danger" type="button" (click)="removeItem(owner.config.collaborationRecords.attributes, attributeIndex)">Usuń</button>
+              </div>
+            }
+            <button type="button" (click)="addCollaborationAttribute(owner.config)">{{ labels.addAttribute }}</button>
+            @if (type === 'profile') { <button class="danger" type="button" [disabled]="config.profiles.length < 2" (click)="removeProfile(owner)">Usuń profil</button> }
+            @if (type === 'project') { <button class="danger" type="button" [disabled]="config.projects.length < 2" (click)="removeProject(owner)">Usuń projekt</button> }
+          </div>
+        </details>
+      </ng-template>
+    </main>
+  } @else {
+    <main class="wrap weeks">
+      <div class="day-nav">
+        <div class="day-nav-strip">
+          @for (entry of allMonthDays; track entry.key) {
+            <button type="button" class="day-pill" [class.today]="entry.key === today" (click)="scrollToDay(entry.key)">
+              <span class="day-pill-week">{{ entry.weekday }}</span>
+              <span>{{ entry.date | date:'dd' }}</span>
+              <span class="day-pill-total">{{ summary(entry.day).label }}</span>
+            </button>
+          }
+        </div>
+      </div>
+      <div class="calendar-toolbar"><button type="button" (click)="openBatch()">Masowe dodawanie wpisów</button></div>
+      @for (week of dayGrid; track $index) {
+        <div class="week" [style.--calendar-cards-per-row]="effectiveConfig.cardsPerRow || 2">
+          @for (entry of week; track entry.key) {
+            <div class="day-anchor" [id]="'day-' + entry.key">
+              <app-day-card [entry]="entry" [config]="effectiveConfig" [collapsed]="entry.day.collapsed" (changed)="saveAndToast()" (collapsedChange)="toggleDay(entry.day)"></app-day-card>
+            </div>
+          }
+        </div>
+      }
+    </main>
+  }
+
+  <footer class="page-footer">{{ pageInfo.footerText }} @if (pageInfo.ownerName) { · Autor: {{ pageInfo.ownerName }} }</footer>
+  @if (toast) { <div class="toast-host" aria-live="polite">{{ toast }}</div> }
+
+  @if (pageInfoOpen) {
+    <div class="modal" (click)="pageInfoOpen = false">
+      <div class="modal-panel" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+        <div class="modal-head"><div><div class="small">O aplikacji</div><h3>{{ pageInfo.title }}</h3></div><button type="button" aria-label="Zamknij" (click)="pageInfoOpen = false">✕</button></div>
+        <p>{{ pageInfo.summary }}</p>
+        @if (pageInfo.ownerUrl) { <a [href]="pageInfo.ownerUrl" target="_blank" rel="noopener">{{ pageInfo.ownerName }}</a> }
+        <div class="page-info-grid">
+          @for (card of pageInfo.cards; track card.id) { <div class="page-info-item"><strong>{{ card.title }}</strong><span>{{ card.body }}</span></div> }
+        </div>
+      </div>
     </div>
-  </div>
+  }
+
+  @if (batchOpen) {
+    <div class="modal" (click)="batchOpen = false">
+      <div class="modal-panel" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+        <div class="modal-head"><div><div class="small">Masowe dodawanie wpisów</div><h3>Dodaj wpisy dla {{ currentMonth }}</h3></div><button type="button" aria-label="Zamknij" (click)="batchOpen = false">✕</button></div>
+        <div class="row2">
+          <label>Typ wpisu pracy<select [(ngModel)]="batchWorkType" (ngModelChange)="onBatchTypeChange()">@for (type of effectiveConfig.workTypes; track type.id) { <option [value]="type.id">{{ type.name }}</option> }</select></label>
+          <label>Rozdzielczość czasu<select [(ngModel)]="batchResolution"><option value="minute">Minuty</option><option value="30m">30 minut</option><option value="hour">Godziny</option></select></label>
+        </div>
+        <div class="row2"><label>Początek pracy<input type="time" [(ngModel)]="batchWorkFrom" [step]="fieldStep()"></label><label>Koniec pracy<input type="time" [(ngModel)]="batchWorkTo" [step]="fieldStep()"></label></div>
+        <label>Opis działania<textarea [(ngModel)]="batchDescription"></textarea></label>
+        <label>Uwagi do działania<textarea [(ngModel)]="batchNotes"></textarea></label>
+        <div><div class="small">Dodaj wpis w dniach tygodnia</div><div class="weekday-grid">@for (name of weekdays; track $index; let index = $index) { <label><input type="checkbox" [checked]="batchWeekdays.includes(index)" (change)="toggleBatchWeekday(index, $any($event.target).checked)"><span>{{ name }}</span></label> }</div></div>
+        <div class="small">Dni do uzupełnienia: {{ batchDaysCount }}</div>
+        <div class="modal-actions"><button type="button" (click)="batchOpen = false">Anuluj</button><button type="button" class="primary" (click)="applyBatch()">Dodaj wpisy</button></div>
+      </div>
+    </div>
+  }
+}

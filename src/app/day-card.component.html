@@ -1,0 +1,106 @@
+<article class="day" [class.off]="!entry.inMonth" [class.is-collapsed]="collapsed">
+  <div class="day-head">
+    <div>
+      <div class="day-title">{{ entry.weekday }} {{ entry.date | date:'dd' }}</div>
+      <div class="day-total">{{ entry.inMonth ? totalDuration : 'Poza wybranym miesiącem' }}</div>
+      @if (day.area?.trim()) {
+        <div class="day-area-summary"><strong>Obszar działania:</strong> {{ day.area }}</div>
+      }
+    </div>
+    @if (entry.inMonth) {
+      <button class="day-toggle" type="button" (click)="toggle()">{{ collapsed ? 'Rozwiń' : 'Zwiń' }}</button>
+    }
+  </div>
+  @if (entry.inMonth && !collapsed) {
+    <div class="day-body">
+      <div class="day-range-row">
+        <label>Zakres dnia od
+          <input type="time" [ngModel]="day.workFrom" [step]="step()" (ngModelChange)="workRangeChanged('workFrom', $event)">
+        </label>
+        <label>Zakres dnia do
+          <input type="time" [ngModel]="day.workTo" [step]="step()" (ngModelChange)="workRangeChanged('workTo', $event)">
+        </label>
+      </div>
+
+      <label>Obszar działania — gdzie wykonano pracę w ciągu dnia?
+        <textarea [(ngModel)]="day.area" placeholder="Opisz miejsce lub obszar wykonanej pracy" (ngModelChange)="actionChanged()"></textarea>
+      </label>
+      <div class="row2">
+        <label>Plan dalszych działań
+          <textarea [(ngModel)]="day.nextPlan" placeholder="Co dalej?" (ngModelChange)="actionChanged()"></textarea>
+        </label>
+        <label>Trudności / ryzyka
+          <textarea [(ngModel)]="day.risks" placeholder="Problemy, ryzyka, bariery" (ngModelChange)="actionChanged()"></textarea>
+        </label>
+      </div>
+      <label>Uwagi do dnia
+        <textarea [(ngModel)]="day.notes" placeholder="Dodatkowe uwagi" (ngModelChange)="actionChanged()"></textarea>
+      </label>
+
+      @for (field of dayFields; track field.id) {
+        <label>{{ field.label || field.id }}
+          <textarea [ngModel]="day.extra?.[field.id] || ''" (ngModelChange)="day.extra[field.id] = $event; actionChanged()"></textarea>
+        </label>
+      }
+
+      <details open>
+        <summary>Działania w ciągu dnia ({{ day.actions.length }})</summary>
+        <div class="actions">
+          @for (action of day.actions; track $index; let index = $index) {
+            <div class="action">
+              <div class="action-top">
+                <label>Typ działania
+                  <select [(ngModel)]="action.workType" (ngModelChange)="actionTypeChanged(action)">
+                    @for (type of config.workTypes; track type.id) {
+                      <option [value]="type.id">{{ type.name }}</option>
+                    }
+                  </select>
+                </label>
+                <label>Od
+                  <input type="time" [ngModel]="action.from" [step]="step()" (ngModelChange)="changeTime(action, 'from', $event)">
+                </label>
+                <label>Do
+                  <input type="time" [ngModel]="action.to" [step]="step()" (ngModelChange)="changeTime(action, 'to', $event)">
+                </label>
+                <button class="danger" type="button" (click)="day.actions.splice(index, 1); actionChanged()">Usuń</button>
+              </div>
+              <label>Opis działania
+                <textarea [(ngModel)]="action.description" placeholder="Co zostało wykonane?" (ngModelChange)="actionChanged()"></textarea>
+              </label>
+              @for (attribute of attributesFor(action); track attribute.id) {
+                <label>{{ attribute.label || attribute.name || attribute.id }}
+                  <textarea [ngModel]="action.attrs?.[attribute.id] || ''" (ngModelChange)="updateActionAttribute(action, attribute.id, $event)"></textarea>
+                </label>
+              }
+              <label>Uwagi do działania
+                <textarea [(ngModel)]="action.notes" placeholder="Dodatkowe informacje" (ngModelChange)="actionChanged()"></textarea>
+              </label>
+              <div class="small">Czas działania: {{ actionDuration(action) }}</div>
+            </div>
+          }
+          <button type="button" (click)="day.actions.push(newAction()); actionChanged()">+ Dodaj działanie</button>
+        </div>
+      </details>
+
+      <details>
+        <summary>{{ config.collaborationRecords?.title || 'Współpraca z osobami' }} ({{ day.collaborationRecords.length }})</summary>
+        <div class="actions">
+          @for (record of day.collaborationRecords; track $index; let index = $index) {
+            <div class="action">
+              <div class="row2">
+                <div class="small">Rekord współpracy {{ index + 1 }}</div>
+                <button class="danger" type="button" (click)="day.collaborationRecords.splice(index, 1); actionChanged()">Usuń</button>
+              </div>
+              @for (attribute of collaborationAttributes; track attribute.id) {
+                <label>{{ attribute.label || attribute.name || attribute.id }}
+                  <textarea [ngModel]="record.attrs?.[attribute.id] || ''" (ngModelChange)="updateCollaborationAttribute(record, attribute.id, $event)"></textarea>
+                </label>
+              }
+            </div>
+          }
+          <button type="button" (click)="day.collaborationRecords.push({attrs: {}}); actionChanged()">+ Dodaj rekord</button>
+        </div>
+      </details>
+    </div>
+  }
+</article>
