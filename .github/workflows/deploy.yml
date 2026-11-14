@@ -32,14 +32,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Build Angular app
-        run: npx ng build --base-href=/eu-reporter/
+        run: npm run build -- --configuration production --base-href=/${{ github.event.repository.name }}/
       - name: Add SPA fallback
-        run: cp dist/eu-reporter/browser/index.html dist/eu-reporter/browser/404.html
+        run: cp dist/${{ github.event.repository.name }}/browser/index.html dist/${{ github.event.repository.name }}/browser/404.html
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v5
         with:
-          path: dist/eu-reporter/browser
+          path: dist/${{ github.event.repository.name }}/browser
 
   deploy:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -56,6 +56,8 @@ jobs:
       group: github-pages
       cancel-in-progress: true
     steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
