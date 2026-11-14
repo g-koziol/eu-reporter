@@ -13,6 +13,7 @@ export class CalendarViewComponent {
   @Input({ required: true }) weeks: any[][] = [];
   @Input({ required: true }) config: any;
   @Input({ required: true }) today = '';
+  @Input() projectId: string | null = null;
   @Output() batchRequested = new EventEmitter<void>();
   @Output() changed = new EventEmitter<void>();
   @Output() dayCollapsed = new EventEmitter<any>();

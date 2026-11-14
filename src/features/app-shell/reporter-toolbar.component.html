@@ -21,6 +21,7 @@
         @if (optionsOpen) {
           <div class="toolbar-menu-panel" role="menu" aria-label="Dodatkowe opcje">
             <button type="button" (click)="configure()">{{ labels.config }}</button>
+            <button type="button" (click)="openDictionaries()">Słowniki</button>
             <button type="button" (click)="exportJsonRequested.emit()">{{ labels.exportJson }}</button>
             <button type="button" (click)="exportPdfRequested.emit()">{{ labels.exportPdf }}</button>
             <label class="btn">{{ labels.importJson }}

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 test('creates an activity and restores it after reload', async ({ page }) => {
   await page.goto('/');
@@ -47,4 +48,44 @@ test('submits batch entries for selected weekdays', async ({ page }) => {
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('.stat').filter({ hasText: 'Liczba działań' })).toContainText(String(expectedEntries));
   await expect(page.locator('app-day-card article.day:not(.off) textarea[placeholder="Co zostało wykonane?"]')).toHaveCount(expectedEntries);
+});
+
+test('stores a project dictionary value and selects it from a day field', async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  await page.goto('/');
+  await page.getByRole('button', { name: '⋯' }).click();
+  await page.getByRole('button', { name: 'Słowniki' }).click();
+  await expect(page.locator('app-dictionaries-page select')).toHaveValue(/^project-/);
+
+  await page.getByLabel('Klucz pola').fill('day.area');
+  await page.getByRole('button', { name: 'Dodaj słownik' }).click();
+  await page.getByPlaceholder('Nowa wartość').fill('Placówka szkolna');
+  await page.getByRole('button', { name: 'Dodaj wartość' }).click();
+  const savedValue = page.locator('.dictionary-value-row input').first();
+  await expect(savedValue).toHaveValue('Placówka szkolna');
+  await savedValue.fill('Wsparcie w szkole');
+  await page.locator('.dictionary-value-row button').filter({ hasText: 'Zapisz' }).click();
+  await expect(savedValue).toHaveValue('Wsparcie w szkole');
+
+  await page.getByRole('button', { name: 'Powrót do kalendarza' }).click();
+  const day = page.locator('app-day-card article.day:not(.off)').first();
+  await day.getByRole('button', { name: 'Otwórz słownik dla pola day.area' }).click();
+  await page.getByRole('searchbox', { name: 'Szukaj zapisanych wartości' }).fill('szkol');
+  await page.getByRole('button', { name: 'Wsparcie w szkole' }).click();
+
+  await expect(day.getByPlaceholder('Opisz miejsce lub obszar wykonanej pracy')).toHaveValue('Wsparcie w szkole');
+  page.on('dialog', (dialog) => dialog.dismiss());
+  await page.getByRole('button', { name: '⋯' }).click();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Eksport JSON' }).click();
+  const download = await downloadPromise;
+  const exported = JSON.parse(await readFile(await download.path(), 'utf8'));
+  expect(exported.data.dictionaries).toContainEqual({
+    id: JSON.stringify([await page.locator('app-reporter-toolbar select').nth(1).inputValue(), 'day.area']),
+    projectId: await page.locator('app-reporter-toolbar select').nth(1).inputValue(),
+    fieldKey: 'day.area',
+    values: ['Wsparcie w szkole']
+  });
+  expect(pageErrors).toEqual([]);
 });

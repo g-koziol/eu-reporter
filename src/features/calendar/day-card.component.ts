@@ -2,15 +2,17 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { actionMinutes, fmtMin, roundTime, stepForResolution } from '../../shared/utils/time.js';
+import { ValueAutocompleteComponent } from '../../shared/components/value-autocomplete.component';
 
 @Component({
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ValueAutocompleteComponent],
   selector: 'app-day-card',
   templateUrl: './day-card.component.html'
 })
 export class DayCardComponent {
   @Input({ required: true }) entry: any;
   @Input({ required: true }) config: any;
+  @Input() projectId: string | null = null;
   @Input() collapsed = false;
   @Output() changed = new EventEmitter<void>();
   @Output() collapsedChange = new EventEmitter<void>();

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { roundTime, stepForResolution } from '../../shared/utils/time.js';
+import { ValueAutocompleteComponent } from '../../shared/components/value-autocomplete.component';
 
 const WEEKDAYS = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
 
@@ -16,7 +17,7 @@ export interface BatchEntryRequest {
 }
 
 @Component({
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ValueAutocompleteComponent],
   selector: 'app-batch-entry-dialog',
   templateUrl: './batch-entry-dialog.component.html'
 })
@@ -24,6 +25,7 @@ export class BatchEntryDialogComponent implements OnChanges {
   @Input() open = false;
   @Input() monthDays: any[] = [];
   @Input() currentMonth = '';
+  @Input() projectId: string | null = null;
   @Input() config: any;
   @Output() closed = new EventEmitter<void>();
   @Output() submitted = new EventEmitter<BatchEntryRequest>();

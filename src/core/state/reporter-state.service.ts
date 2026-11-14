@@ -14,7 +14,7 @@ import {
 } from '../config/defaults.js';
 import { normalizeConfig } from '../config/normalize.js';
 import { getDefaultDayShape } from '../../features/calendar/calendar.js';
-import { loadDb, saveDb } from '../persistence/indexeddb.js';
+import { loadAllProjectDictionaries, loadDb, replaceAllProjectDictionaries, saveDb } from '../persistence/indexeddb.js';
 import { actionMinutes, iso, monthGrid, normalizeResolution, roundTime, timeToMin, ym } from '../../shared/utils/time.js';
 
 const WEEKDAYS = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
@@ -194,6 +194,14 @@ export class ReporterStateService {
 
   save(): Promise<void> {
     return saveDb(this.db);
+  }
+
+  async exportData(): Promise<any> {
+    return { ...this.db, dictionaries: await loadAllProjectDictionaries() };
+  }
+
+  replaceDictionaries(dictionaries: unknown): Promise<void> {
+    return replaceAllProjectDictionaries(dictionaries);
   }
 
   private getMonthBucket(): any {

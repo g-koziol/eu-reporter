@@ -1,0 +1,30 @@
+<div class="value-autocomplete">
+  <button
+    type="button"
+    class="value-autocomplete-trigger"
+    [attr.aria-expanded]="open"
+    [attr.aria-label]="'Otwórz słownik dla pola ' + fieldKey"
+    (click)="toggle()"
+  >
+    Słownik
+  </button>
+  @if (open) {
+    <div class="value-autocomplete-panel">
+      <label>Szukaj zapisanych wartości
+        <input type="search" [(ngModel)]="query" (ngModelChange)="search()">
+      </label>
+      @if (matches.length) {
+        <ul>
+          @for (match of matches; track match) {
+            <li><button type="button" class="value-autocomplete-option" (click)="select(match)">{{ match }}</button></li>
+          }
+        </ul>
+      } @else if (!loading) {
+        <div class="small">Brak pasujących wartości</div>
+      }
+      @if (value.trim() && !isRemembered()) {
+        <button type="button" (click)="rememberCurrentValue()">Zapisz bieżącą wartość</button>
+      }
+    </div>
+  }
+</div>

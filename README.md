@@ -27,8 +27,10 @@ Przed pierwszą publikacją w ustawieniach repozytorium wybierz **Settings → P
 
 Dane aplikacji zapisują się automatycznie w IndexedDB tej przeglądarki i pozostają dostępne po ponownym wejściu na stronę. Przy pierwszym uruchomieniu istniejące dane z `localStorage` są przenoszone do IndexedDB. Usunięcie danych witryny w przeglądarce usuwa również ten zapis, dlatego zalecane jest okresowe korzystanie z eksportu JSON.
 
-Baza IndexedDB przechowuje konfigurację, miesiące i metadane w osobnych magazynach. W metadanych zapisywana jest semantyczna wersja schematu, obecnie `1.0.0`; liczbowy numer IndexedDB służy wyłącznie do zmian magazynów.
+Baza IndexedDB przechowuje konfigurację, miesiące, słowniki projektów i metadane w osobnych magazynach. W metadanych zapisywana jest semantyczna wersja schematu, obecnie `1.1.0`; liczbowy numer IndexedDB służy wyłącznie do zmian magazynów.
 
-Przed migracją istniejąca baza jest kopiowana do osobnej bazy o nazwie zakończonej `_backup_<wersja>`. Zmiany schematu aplikacji należy wersjonować semantycznie i rejestrować w `SCHEMA_MIGRATIONS`; migracje uruchamiają się rosnąco po wersji. Dane z poprzedniego, pojedynczego rekordu `appData` są migrowane automatycznie.
+Przed migracją istniejąca baza jest kopiowana do osobnej bazy o nazwie zakończonej `_backup_<wersja>`. Zmiany schematu aplikacji należy wersjonować semantycznie i rejestrować w `SCHEMA_MIGRATIONS`; migracje uruchamiają się rosnąco po wersji. Dane z poprzedniego, pojedynczego rekordu `appData` są migrowane automatycznie, a wcześniejsze wpisy tekstowe tworzą słowniki projektu.
+
+Słowniki są przypisane do pary projekt/pole. Można je edytować na stronie **Słowniki**; podpowiedzi w polach kalendarza i masowego dodawania wyszukują zapisane wartości pełnotekstowo.
 
 Eksport i import zachowują dotychczasowy format danych, w tym konfigurację oraz miesięczne wpisy. Pliki JSON mogą być opcjonalnie szyfrowane hasłem.

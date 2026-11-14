@@ -24,6 +24,7 @@
     (profileChanged)="changeProfile($event)"
     (projectChanged)="changeProject($event)"
     (configurationRequested)="configOpen = true"
+    (dictionariesRequested)="openDictionaries()"
     (exportJsonRequested)="exportJson()"
     (exportPdfRequested)="exportPdf()"
     (importRequested)="importJson($event)"
@@ -39,12 +40,20 @@
       (profileSelected)="changeProfile($event)"
       (projectSelected)="changeProject($event)"
     ></app-configuration-page>
+  } @else if (dictionariesOpen) {
+    <app-dictionaries-page
+      [projects]="config.projects"
+      [projectId]="selectedProjectId"
+      (closed)="dictionariesOpen = false"
+      (projectSelected)="changeProject($event)"
+    ></app-dictionaries-page>
   } @else {
     <app-calendar-view
       [monthDays]="allMonthDays"
       [weeks]="dayGrid"
       [config]="effectiveConfig"
       [today]="today"
+      [projectId]="selectedProjectId"
       (batchRequested)="openBatch()"
       (changed)="saveAndToast()"
       (dayCollapsed)="toggleDay($event)"
@@ -60,6 +69,7 @@
     [open]="batchOpen"
     [monthDays]="allMonthDays"
     [currentMonth]="currentMonth"
+    [projectId]="selectedProjectId"
     [config]="effectiveConfig"
     (closed)="batchOpen = false"
     (submitted)="applyBatch($event)"

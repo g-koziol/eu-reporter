@@ -18,6 +18,7 @@
           <app-day-card
             [entry]="entry"
             [config]="config"
+            [projectId]="projectId"
             [collapsed]="entry.day.collapsed"
             (changed)="changed.emit()"
             (collapsedChange)="dayCollapsed.emit(entry.day)"

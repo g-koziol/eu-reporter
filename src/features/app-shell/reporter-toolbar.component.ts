@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { fmtMin } from '../../shared/utils/time.js';
 
@@ -25,12 +25,22 @@ export class ReporterToolbarComponent {
   @Output() profileChanged = new EventEmitter<string>();
   @Output() projectChanged = new EventEmitter<string>();
   @Output() configurationRequested = new EventEmitter<void>();
+  @Output() dictionariesRequested = new EventEmitter<void>();
   @Output() exportJsonRequested = new EventEmitter<void>();
   @Output() exportPdfRequested = new EventEmitter<void>();
   @Output() importRequested = new EventEmitter<Event>();
   @Output() clearMonthRequested = new EventEmitter<void>();
 
+  constructor(private readonly host: ElementRef<HTMLElement>) {}
+
   optionsOpen = false;
+
+  @HostListener('document:click', ['$event'])
+  closeOptionsOnOutsideClick(event: MouseEvent): void {
+    if (this.optionsOpen && !this.host.nativeElement.contains(event.target as Node)) {
+      this.optionsOpen = false;
+    }
+  }
 
   formatMinutes(value: number): string {
     return fmtMin(value);
@@ -39,6 +49,11 @@ export class ReporterToolbarComponent {
   configure(): void {
     this.optionsOpen = false;
     this.configurationRequested.emit();
+  }
+
+  openDictionaries(): void {
+    this.optionsOpen = false;
+    this.dictionariesRequested.emit();
   }
 
   importFile(event: Event): void {

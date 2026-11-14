@@ -1,7 +1,7 @@
 import { compareVersions, validateStrict } from 'compare-versions';
 import { STORAGE_KEY, createDefaultConfig, DEFAULT_VERSION } from '../config/defaults.js';
 import { normalizeConfig } from '../config/normalize.js';
-import type { AppDatabase } from '../models.js';
+import type { AppDatabase, ProjectDictionary } from '../models.js';
 
 interface PersistenceOptions {
   indexedDB?: IDBFactory;
@@ -25,6 +25,13 @@ interface MonthRecord {
   data: unknown;
 }
 
+interface DictionaryRecord {
+  id: string;
+  projectId: string;
+  fieldKey: string;
+  values: string[];
+}
+
 interface SchemaMigration {
   version: string;
   up: (database: IDBDatabase) => void | Promise<void>;
@@ -39,15 +46,19 @@ interface StoreSnapshot {
 }
 
 const DATABASE_NAME = 'ewidencjaProjektowa';
-const DATABASE_VERSION = 3;
+const DATABASE_VERSION = 4;
 const CONFIG_STORE_NAME = 'config';
 const MONTH_STORE_NAME = 'months';
+const DICTIONARY_STORE_NAME = 'dictionaries';
 const METADATA_STORE_NAME = 'metadata';
 const LEGACY_STORE_NAME = 'appData';
 const CONFIG_RECORD_ID = 'root';
 const SCHEMA_VERSION_KEY = 'schemaVersion';
-export const CURRENT_SCHEMA_VERSION = '1.0.0';
-const SCHEMA_MIGRATIONS: SchemaMigration[] = [];
+const LEGACY_SCHEMA_VERSION = '1.0.0';
+export const CURRENT_SCHEMA_VERSION = '1.1.0';
+const SCHEMA_MIGRATIONS: SchemaMigration[] = [
+  { version: '1.1.0', up: migrateExistingEntriesToDictionaries }
+];
 const databasePromises = new WeakMap<IDBFactory, Map<string, Promise<IDBDatabase>>>();
 let writeQueue: Promise<void> = Promise.resolve();
 
@@ -113,6 +124,74 @@ function transactionResult(transaction: IDBTransaction): Promise<void> {
     transaction.onerror = () => reject(transaction.error || new Error('Transakcja bazy danych nie powiodła się'));
     transaction.onabort = () => reject(transaction.error || new Error('Transakcja bazy danych została przerwana'));
   });
+}
+
+function addDictionaryValue(
+  dictionaries: Map<string, Map<string, Set<string>>>,
+  projectId: string,
+  fieldKey: string,
+  value: unknown
+): void {
+  if (typeof value !== 'string' || !value.trim()) return;
+  let projectDictionaries = dictionaries.get(projectId);
+  if (!projectDictionaries) {
+    projectDictionaries = new Map();
+    dictionaries.set(projectId, projectDictionaries);
+  }
+  let values = projectDictionaries.get(fieldKey);
+  if (!values) {
+    values = new Set();
+    projectDictionaries.set(fieldKey, values);
+  }
+  values.add(value.trim());
+}
+
+async function migrateExistingEntriesToDictionaries(database: IDBDatabase): Promise<void> {
+  if (!database.objectStoreNames.contains(MONTH_STORE_NAME)) return;
+  const readTransaction = database.transaction(MONTH_STORE_NAME, 'readonly');
+  const readComplete = transactionResult(readTransaction);
+  const monthsRequest = requestResult<MonthRecord[]>(readTransaction.objectStore(MONTH_STORE_NAME).getAll());
+  const [months] = await Promise.all([monthsRequest, readComplete]);
+  const dictionaries = new Map<string, Map<string, Set<string>>>();
+
+  for (const month of months) {
+    const profiles = month.data as Record<string, Record<string, { days?: Record<string, any> }>>;
+    for (const projectBuckets of Object.values(profiles || {})) {
+      for (const [projectId, bucket] of Object.entries(projectBuckets || {})) {
+        for (const day of Object.values(bucket?.days || {})) {
+          for (const fieldKey of ['area', 'nextPlan', 'risks', 'notes']) {
+            addDictionaryValue(dictionaries, projectId, `day.${fieldKey}`, day[fieldKey]);
+          }
+          for (const [fieldId, value] of Object.entries(day.extra || {})) {
+            addDictionaryValue(dictionaries, projectId, `day.extra:${fieldId}`, value);
+          }
+          for (const action of Array.isArray(day.actions) ? day.actions : []) {
+            addDictionaryValue(dictionaries, projectId, 'action.description', action.description);
+            addDictionaryValue(dictionaries, projectId, 'action.notes', action.notes);
+            for (const [attributeId, value] of Object.entries(action.attrs || {})) {
+              addDictionaryValue(dictionaries, projectId, `action.attribute:${action.workType}:${attributeId}`, value);
+            }
+          }
+          for (const record of Array.isArray(day.collaborationRecords) ? day.collaborationRecords : []) {
+            for (const [attributeId, value] of Object.entries(record.attrs || {})) {
+              addDictionaryValue(dictionaries, projectId, `collaboration.attribute:${attributeId}`, value);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (!dictionaries.size) return;
+  const writeTransaction = database.transaction(DICTIONARY_STORE_NAME, 'readwrite');
+  const writeComplete = transactionResult(writeTransaction);
+  const store = writeTransaction.objectStore(DICTIONARY_STORE_NAME);
+  for (const [projectId, fields] of dictionaries) {
+    for (const [fieldKey, values] of fields) {
+      store.put({ id: dictionaryId(projectId, fieldKey), projectId, fieldKey, values: [...values] });
+    }
+  }
+  await writeComplete;
 }
 
 function readSchemaVersion(database: IDBDatabase): Promise<string | null> {
@@ -270,6 +349,10 @@ function upgradeDatabase(indexedDB: IDBFactory, databaseName: string): Promise<I
       if (!database.objectStoreNames.contains(METADATA_STORE_NAME)) {
         database.createObjectStore(METADATA_STORE_NAME, { keyPath: 'key' });
       }
+      if (!database.objectStoreNames.contains(DICTIONARY_STORE_NAME)) {
+        const dictionaryStore = database.createObjectStore(DICTIONARY_STORE_NAME, { keyPath: 'id' });
+        dictionaryStore.createIndex('byProjectId', 'projectId', { unique: false });
+      }
       if (event.oldVersion < 2) migrateLegacyRecord(transaction, configStore, monthStore);
     };
     request.onsuccess = () => resolve(request.result);
@@ -287,7 +370,7 @@ async function openAndMigrateDatabase(indexedDB: IDBFactory, databaseName: strin
   } else {
     try {
       const storedVersion = await readSchemaVersion(database);
-      const fromVersion = storedVersion || CURRENT_SCHEMA_VERSION;
+      const fromVersion = storedVersion || LEGACY_SCHEMA_VERSION;
       const pending = pendingMigrations(fromVersion, CURRENT_SCHEMA_VERSION, SCHEMA_MIGRATIONS);
       if (database.version < DATABASE_VERSION || pending.length) {
         const snapshot = await snapshotDatabase(database);
@@ -305,7 +388,7 @@ async function openAndMigrateDatabase(indexedDB: IDBFactory, databaseName: strin
   }
 
   const storedVersion = await readSchemaVersion(database);
-  await runSchemaMigrations(database, { fromVersion: storedVersion || CURRENT_SCHEMA_VERSION });
+  await runSchemaMigrations(database, { fromVersion: storedVersion || (existing.created ? CURRENT_SCHEMA_VERSION : LEGACY_SCHEMA_VERSION) });
   return database;
 }
 
@@ -380,6 +463,163 @@ export function saveDb(db: AppDatabase, { indexedDB = globalThis.indexedDB, stor
       return;
     }
     throw new Error('Brak dostępnej pamięci przeglądarki');
+  });
+  writeQueue = write.catch(() => {});
+  return write;
+}
+
+function dictionaryId(projectId: string, fieldKey: string): string {
+  return JSON.stringify([projectId, fieldKey]);
+}
+
+export async function loadProjectDictionaries(
+  projectId: string,
+  { indexedDB = globalThis.indexedDB, storage = globalThis.localStorage, databaseName = DATABASE_NAME }: PersistenceOptions = {}
+): Promise<DictionaryRecord[]> {
+  const database = await openDatabase(indexedDB, databaseName);
+  if (!database) {
+    const records: DictionaryRecord[] = [];
+    const prefix = `${STORAGE_KEY}_dictionary_`;
+    for (let index = 0; storage && index < storage.length; index += 1) {
+      const key = storage.key(index);
+      if (!key?.startsWith(prefix)) continue;
+      try {
+        const record = JSON.parse(storage.getItem(key) || 'null') as DictionaryRecord | null;
+        if (record?.projectId === projectId) records.push(record);
+      } catch {
+        continue;
+      }
+    }
+    return records;
+  }
+  const transaction = database.transaction(DICTIONARY_STORE_NAME, 'readonly');
+  const complete = transactionResult(transaction);
+  const request = requestResult<DictionaryRecord[]>(transaction.objectStore(DICTIONARY_STORE_NAME).index('byProjectId').getAll(projectId));
+  const [records] = await Promise.all([request, complete]);
+  return records;
+}
+
+export async function loadAllProjectDictionaries(
+  { indexedDB = globalThis.indexedDB, storage = globalThis.localStorage, databaseName = DATABASE_NAME }: PersistenceOptions = {}
+): Promise<ProjectDictionary[]> {
+  const database = await openDatabase(indexedDB, databaseName);
+  if (database) {
+    const transaction = database.transaction(DICTIONARY_STORE_NAME, 'readonly');
+    const complete = transactionResult(transaction);
+    const request = requestResult<ProjectDictionary[]>(transaction.objectStore(DICTIONARY_STORE_NAME).getAll());
+    const [records] = await Promise.all([request, complete]);
+    return records;
+  }
+
+  const records: ProjectDictionary[] = [];
+  const prefix = `${STORAGE_KEY}_dictionary_`;
+  for (let index = 0; storage && index < storage.length; index += 1) {
+    const key = storage.key(index);
+    if (!key?.startsWith(prefix)) continue;
+    try {
+      const record = JSON.parse(storage.getItem(key) || 'null') as ProjectDictionary | null;
+      if (record?.projectId && record.fieldKey && Array.isArray(record.values)) records.push(record);
+    } catch {
+      continue;
+    }
+  }
+  return records;
+}
+
+export function replaceAllProjectDictionaries(
+  values: unknown,
+  { indexedDB = globalThis.indexedDB, storage = globalThis.localStorage, databaseName = DATABASE_NAME }: PersistenceOptions = {}
+): Promise<void> {
+  const records: ProjectDictionary[] = Array.isArray(values)
+    ? values.filter((value): value is ProjectDictionary => Boolean(
+      value && typeof value === 'object' &&
+      typeof (value as ProjectDictionary).projectId === 'string' &&
+      typeof (value as ProjectDictionary).fieldKey === 'string' &&
+      Array.isArray((value as ProjectDictionary).values)
+    )).map((value) => ({
+      id: dictionaryId(value.projectId, value.fieldKey),
+      projectId: value.projectId,
+      fieldKey: value.fieldKey,
+      values: [...new Set(value.values.filter((entry): entry is string => typeof entry === 'string').map((entry) => entry.trim()).filter(Boolean))]
+    }))
+    : [];
+
+  const write = writeQueue.then(async () => {
+    const database = await openDatabase(indexedDB, databaseName);
+    if (database) {
+      const transaction = database.transaction(DICTIONARY_STORE_NAME, 'readwrite');
+      const complete = transactionResult(transaction);
+      const store = transaction.objectStore(DICTIONARY_STORE_NAME);
+      store.clear();
+      for (const record of records) store.put(record);
+      await complete;
+      return;
+    }
+    if (storage) {
+      const keysToRemove: string[] = [];
+      const prefix = `${STORAGE_KEY}_dictionary_`;
+      for (let index = 0; index < storage.length; index += 1) {
+        const key = storage.key(index);
+        if (key?.startsWith(prefix)) keysToRemove.push(key);
+      }
+      for (const key of keysToRemove) storage.removeItem(key);
+      for (const record of records) storage.setItem(`${prefix}${record.id}`, JSON.stringify(record));
+      return;
+    }
+    throw new Error('Brak dostępnej pamięci przeglądarki');
+  });
+  writeQueue = write.catch(() => {});
+  return write;
+}
+
+export function saveProjectDictionary(
+  projectId: string,
+  fieldKey: string,
+  values: string[],
+  { indexedDB = globalThis.indexedDB, storage = globalThis.localStorage, databaseName = DATABASE_NAME }: PersistenceOptions = {}
+): Promise<void> {
+  const record: DictionaryRecord = {
+    id: dictionaryId(projectId, fieldKey),
+    projectId,
+    fieldKey,
+    values: [...new Set(values.map((value) => value.trim()).filter(Boolean))]
+  };
+  const write = writeQueue.then(async () => {
+    const database = await openDatabase(indexedDB, databaseName);
+    if (database) {
+      const transaction = database.transaction(DICTIONARY_STORE_NAME, 'readwrite');
+      const complete = transactionResult(transaction);
+      transaction.objectStore(DICTIONARY_STORE_NAME).put(record);
+      await complete;
+      return;
+    }
+    if (storage) {
+      const key = `${STORAGE_KEY}_dictionary_${record.id}`;
+      storage.setItem(key, JSON.stringify(record));
+      return;
+    }
+    throw new Error('Brak dostępnej pamięci przeglądarki');
+  });
+  writeQueue = write.catch(() => {});
+  return write;
+}
+
+export function deleteProjectDictionary(
+  projectId: string,
+  fieldKey: string,
+  { indexedDB = globalThis.indexedDB, storage = globalThis.localStorage, databaseName = DATABASE_NAME }: PersistenceOptions = {}
+): Promise<void> {
+  const id = dictionaryId(projectId, fieldKey);
+  const write = writeQueue.then(async () => {
+    const database = await openDatabase(indexedDB, databaseName);
+    if (database) {
+      const transaction = database.transaction(DICTIONARY_STORE_NAME, 'readwrite');
+      const complete = transactionResult(transaction);
+      transaction.objectStore(DICTIONARY_STORE_NAME).delete(id);
+      await complete;
+      return;
+    }
+    storage?.removeItem(`${STORAGE_KEY}_dictionary_${id}`);
   });
   writeQueue = write.catch(() => {});
   return write;

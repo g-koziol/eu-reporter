@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { BatchEntryDialogComponent, type BatchEntryRequest } from '../features/batch-entry/batch-entry-dialog.component';
 import { CalendarViewComponent } from '../features/calendar/calendar-view.component';
 import { ConfigurationPageComponent } from '../features/configuration/configuration-page.component';
+import { DictionariesPageComponent } from '../features/dictionaries/dictionaries-page.component';
 import { ReporterToolbarComponent } from '../features/app-shell/reporter-toolbar.component';
 import { PageInfoDialogComponent } from '../shared/components/page-info-dialog.component';
 import { DEFAULT_VERSION } from '../core/config/defaults.js';
@@ -13,7 +14,7 @@ import { ReporterStateService } from '../core/state/reporter-state.service';
 import { iso } from '../shared/utils/time.js';
 
 @Component({
-  imports: [CommonModule, FormsModule, BatchEntryDialogComponent, CalendarViewComponent, ConfigurationPageComponent, PageInfoDialogComponent, ReporterToolbarComponent],
+  imports: [CommonModule, FormsModule, BatchEntryDialogComponent, CalendarViewComponent, ConfigurationPageComponent, DictionariesPageComponent, PageInfoDialogComponent, ReporterToolbarComponent],
   selector: 'app-root',
   templateUrl: './app.html',
 })
@@ -26,6 +27,7 @@ export class App implements OnInit {
   readonly ready = signal(false);
   readonly loadError = signal('');
   configOpen = false;
+  dictionariesOpen = false;
   pageInfoOpen = false;
   batchOpen = false;
   readonly today = iso(new Date());
@@ -146,6 +148,11 @@ export class App implements OnInit {
     this.batchOpen = true;
   }
 
+  openDictionaries(): void {
+    this.configOpen = false;
+    this.dictionariesOpen = true;
+  }
+
   applyBatch(request: BatchEntryRequest): void {
     this.state.applyBatch(request);
     this.batchOpen = false;
@@ -164,7 +171,7 @@ export class App implements OnInit {
       app: 'Ewidencja działań projektowych',
       version: DEFAULT_VERSION,
       exportedAt: new Date().toISOString(),
-      data: this.db
+      data: await this.state.exportData()
     };
     let output: any = payload;
     let encrypted = false;
@@ -197,6 +204,7 @@ export class App implements OnInit {
       }
       if (!incoming || typeof incoming !== 'object' || !incoming.months) throw new Error('Nieprawidłowy format pliku');
       this.state.replaceDatabase(incoming);
+      await this.state.replaceDictionaries(incoming.dictionaries || []);
       this.changeDetector.detectChanges();
       await this.persist();
       window.alert('Import zakończony.');

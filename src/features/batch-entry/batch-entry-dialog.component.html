@@ -7,8 +7,18 @@
         <label>Rozdzielczość czasu<select [(ngModel)]="resolution"><option value="minute">Minuty</option><option value="30m">30 minut</option><option value="hour">Godziny</option></select></label>
       </div>
       <div class="row2"><label>Początek pracy<input type="time" [(ngModel)]="workFrom" [step]="step()"></label><label>Koniec pracy<input type="time" [(ngModel)]="workTo" [step]="step()"></label></div>
-      <label>Opis działania<textarea [(ngModel)]="description"></textarea></label>
-      <label>Uwagi do działania<textarea [(ngModel)]="notes"></textarea></label>
+      <label>Opis działania
+        <div class="field-with-autocomplete">
+          <textarea [(ngModel)]="description"></textarea>
+          <app-value-autocomplete [projectId]="projectId" fieldKey="action.description" [value]="description" (valueSelected)="description = $event"></app-value-autocomplete>
+        </div>
+      </label>
+      <label>Uwagi do działania
+        <div class="field-with-autocomplete">
+          <textarea [(ngModel)]="notes"></textarea>
+          <app-value-autocomplete [projectId]="projectId" fieldKey="action.notes" [value]="notes" (valueSelected)="notes = $event"></app-value-autocomplete>
+        </div>
+      </label>
       <div><div class="small">Dodaj wpis w dniach tygodnia</div><div class="weekday-grid">@for (name of weekdays; track $index; let index = $index) { <label><input type="checkbox" [checked]="selectedWeekdays.includes(index)" (change)="toggleWeekday(index, $any($event.target).checked)"><span>{{ name }}</span></label> }</div></div>
       <div class="small">Dni do uzupełnienia: {{ daysCount }}</div>
       <div class="modal-actions"><button type="button" (click)="closed.emit()">Anuluj</button><button type="button" class="primary" (click)="submit()">Dodaj wpisy</button></div>

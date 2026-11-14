@@ -1,0 +1,48 @@
+<main class="wrap config-page dictionaries-page">
+  <div class="config-page-head">
+    <h2>Słowniki</h2>
+    <button class="primary" type="button" (click)="closed.emit()">Powrót do kalendarza</button>
+  </div>
+
+  <label>Projekt
+    <select [ngModel]="selectedProjectId" (ngModelChange)="changeProject($event)">
+      @for (project of projects; track project.id) { <option [value]="project.id">{{ project.name }}</option> }
+    </select>
+  </label>
+
+  <div class="row2 dictionary-create">
+    <label>Klucz pola
+      <input [(ngModel)]="newFieldKey" placeholder="np. day.area">
+    </label>
+    <button type="button" [disabled]="!newFieldKey.trim()" (click)="addDictionary()">Dodaj słownik</button>
+  </div>
+
+  <label>Szukaj klucza lub wartości
+    <input type="search" [(ngModel)]="filter" placeholder="Wyszukaj w słownikach">
+  </label>
+
+  @for (dictionary of filteredDictionaries; track dictionary.fieldKey) {
+    <section class="config-group">
+      <div class="config-group-body">
+        <div class="config-item-title">
+          <strong>{{ dictionary.fieldKey }}</strong>
+          <button type="button" class="danger" (click)="removeDictionary(dictionary.fieldKey)">Usuń słownik</button>
+        </div>
+        @for (entry of visibleValues(dictionary); track entry.index) {
+          <div class="row2 dictionary-value-row">
+            <input [ngModel]="draftValues[dictionary.fieldKey]?.[entry.index] ?? entry.value" (ngModelChange)="draftValues[dictionary.fieldKey][entry.index] = $event">
+            <button type="button" [disabled]="!draftValues[dictionary.fieldKey]?.[entry.index]?.trim()" (click)="saveValue(dictionary.fieldKey, entry.index, entry.value)">Zapisz</button>
+            <button type="button" class="danger" (click)="removeValue(dictionary.fieldKey, entry.value)">Usuń</button>
+          </div>
+        }
+        @if (!dictionary.values.length) { <div class="small">Brak zapisanych wartości</div> }
+        <div class="row2 dictionary-value-row">
+          <input [(ngModel)]="newValues[dictionary.fieldKey]" placeholder="Nowa wartość">
+          <button type="button" [disabled]="!newValues[dictionary.fieldKey]?.trim()" (click)="addValue(dictionary.fieldKey)">Dodaj wartość</button>
+        </div>
+      </div>
+    </section>
+  } @empty {
+    <div class="small">Brak słowników dla wybranego projektu.</div>
+  }
+</main>

@@ -39,4 +39,16 @@ describe('ReporterToolbarComponent', () => {
     expect(requested).toHaveBeenCalledOnce();
     expect(fixture.componentInstance.optionsOpen).toBe(false);
   });
+
+  it('closes the options menu when clicking outside the toolbar', () => {
+    fixture.componentInstance.optionsOpen = true;
+    const outsideButton = document.createElement('button');
+    document.body.append(outsideButton);
+
+    outsideButton.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.optionsOpen).toBe(false);
+    outsideButton.remove();
+  });
 });

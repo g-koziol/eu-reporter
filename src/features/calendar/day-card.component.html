@@ -23,23 +23,38 @@
       </div>
 
       <label>Obszar działania — gdzie wykonano pracę w ciągu dnia?
-        <textarea [(ngModel)]="day.area" placeholder="Opisz miejsce lub obszar wykonanej pracy" (ngModelChange)="actionChanged()"></textarea>
+        <div class="field-with-autocomplete">
+          <textarea [(ngModel)]="day.area" placeholder="Opisz miejsce lub obszar wykonanej pracy" (ngModelChange)="actionChanged()"></textarea>
+          <app-value-autocomplete [projectId]="projectId" fieldKey="day.area" [value]="day.area || ''" (valueSelected)="day.area = $event; actionChanged()"></app-value-autocomplete>
+        </div>
       </label>
       <div class="row2">
         <label>Plan dalszych działań
-          <textarea [(ngModel)]="day.nextPlan" placeholder="Co dalej?" (ngModelChange)="actionChanged()"></textarea>
+          <div class="field-with-autocomplete">
+            <textarea [(ngModel)]="day.nextPlan" placeholder="Co dalej?" (ngModelChange)="actionChanged()"></textarea>
+            <app-value-autocomplete [projectId]="projectId" fieldKey="day.nextPlan" [value]="day.nextPlan || ''" (valueSelected)="day.nextPlan = $event; actionChanged()"></app-value-autocomplete>
+          </div>
         </label>
         <label>Trudności / ryzyka
-          <textarea [(ngModel)]="day.risks" placeholder="Problemy, ryzyka, bariery" (ngModelChange)="actionChanged()"></textarea>
+          <div class="field-with-autocomplete">
+            <textarea [(ngModel)]="day.risks" placeholder="Problemy, ryzyka, bariery" (ngModelChange)="actionChanged()"></textarea>
+            <app-value-autocomplete [projectId]="projectId" fieldKey="day.risks" [value]="day.risks || ''" (valueSelected)="day.risks = $event; actionChanged()"></app-value-autocomplete>
+          </div>
         </label>
       </div>
       <label>Uwagi do dnia
-        <textarea [(ngModel)]="day.notes" placeholder="Dodatkowe uwagi" (ngModelChange)="actionChanged()"></textarea>
+        <div class="field-with-autocomplete">
+          <textarea [(ngModel)]="day.notes" placeholder="Dodatkowe uwagi" (ngModelChange)="actionChanged()"></textarea>
+          <app-value-autocomplete [projectId]="projectId" fieldKey="day.notes" [value]="day.notes || ''" (valueSelected)="day.notes = $event; actionChanged()"></app-value-autocomplete>
+        </div>
       </label>
 
       @for (field of dayFields; track field.id) {
         <label>{{ field.label || field.id }}
-          <textarea [ngModel]="day.extra?.[field.id] || ''" (ngModelChange)="day.extra[field.id] = $event; actionChanged()"></textarea>
+          <div class="field-with-autocomplete">
+            <textarea [ngModel]="day.extra?.[field.id] || ''" (ngModelChange)="day.extra[field.id] = $event; actionChanged()"></textarea>
+            <app-value-autocomplete [projectId]="projectId" [fieldKey]="'day.extra:' + field.id" [value]="day.extra?.[field.id] || ''" (valueSelected)="day.extra[field.id] = $event; actionChanged()"></app-value-autocomplete>
+          </div>
         </label>
       }
 
@@ -65,15 +80,24 @@
                 <button class="danger" type="button" (click)="day.actions.splice(index, 1); actionChanged()">Usuń</button>
               </div>
               <label>Opis działania
-                <textarea [(ngModel)]="action.description" placeholder="Co zostało wykonane?" (ngModelChange)="actionChanged()"></textarea>
+                <div class="field-with-autocomplete">
+                  <textarea [(ngModel)]="action.description" placeholder="Co zostało wykonane?" (ngModelChange)="actionChanged()"></textarea>
+                  <app-value-autocomplete [projectId]="projectId" fieldKey="action.description" [value]="action.description || ''" (valueSelected)="action.description = $event; actionChanged()"></app-value-autocomplete>
+                </div>
               </label>
               @for (attribute of attributesFor(action); track attribute.id) {
                 <label>{{ attribute.label || attribute.name || attribute.id }}
-                  <textarea [ngModel]="action.attrs?.[attribute.id] || ''" (ngModelChange)="updateActionAttribute(action, attribute.id, $event)"></textarea>
+                  <div class="field-with-autocomplete">
+                    <textarea [ngModel]="action.attrs?.[attribute.id] || ''" (ngModelChange)="updateActionAttribute(action, attribute.id, $event)"></textarea>
+                    <app-value-autocomplete [projectId]="projectId" [fieldKey]="'action.attribute:' + action.workType + ':' + attribute.id" [value]="action.attrs?.[attribute.id] || ''" (valueSelected)="updateActionAttribute(action, attribute.id, $event)"></app-value-autocomplete>
+                  </div>
                 </label>
               }
               <label>Uwagi do działania
-                <textarea [(ngModel)]="action.notes" placeholder="Dodatkowe informacje" (ngModelChange)="actionChanged()"></textarea>
+                <div class="field-with-autocomplete">
+                  <textarea [(ngModel)]="action.notes" placeholder="Dodatkowe informacje" (ngModelChange)="actionChanged()"></textarea>
+                  <app-value-autocomplete [projectId]="projectId" fieldKey="action.notes" [value]="action.notes || ''" (valueSelected)="action.notes = $event; actionChanged()"></app-value-autocomplete>
+                </div>
               </label>
               <div class="small">Czas działania: {{ actionDuration(action) }}</div>
             </div>
@@ -93,7 +117,10 @@
               </div>
               @for (attribute of collaborationAttributes; track attribute.id) {
                 <label>{{ attribute.label || attribute.name || attribute.id }}
-                  <textarea [ngModel]="record.attrs?.[attribute.id] || ''" (ngModelChange)="updateCollaborationAttribute(record, attribute.id, $event)"></textarea>
+                  <div class="field-with-autocomplete">
+                    <textarea [ngModel]="record.attrs?.[attribute.id] || ''" (ngModelChange)="updateCollaborationAttribute(record, attribute.id, $event)"></textarea>
+                    <app-value-autocomplete [projectId]="projectId" [fieldKey]="'collaboration.attribute:' + attribute.id" [value]="record.attrs?.[attribute.id] || ''" (valueSelected)="updateCollaborationAttribute(record, attribute.id, $event)"></app-value-autocomplete>
+                  </div>
                 </label>
               }
             </div>

@@ -1,7 +1,14 @@
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import { createDefaultConfig, STORAGE_KEY } from '../config/defaults.js';
-import { CURRENT_SCHEMA_VERSION, loadDb, runSchemaMigrations, saveDb } from './indexeddb.js';
+import { CURRENT_SCHEMA_VERSION, deleteProjectDictionary, loadAllProjectDictionaries, loadDb, loadProjectDictionaries, replaceAllProjectDictionaries, runSchemaMigrations, saveDb, saveProjectDictionary } from './indexeddb.js';
+
+interface TestDictionaryRecord {
+  id: string;
+  projectId: string;
+  fieldKey: string;
+  values: string[];
+}
 
 function requestResult<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -41,7 +48,7 @@ describe('IndexedDB persistence', () => {
     await saveDb(source, { indexedDB, databaseName });
     const restored = await loadDb({ indexedDB, databaseName });
     const database = await requestResult(indexedDB.open(databaseName));
-    const transaction = database.transaction(['config', 'months', 'metadata'], 'readonly');
+    const transaction = database.transaction(['config', 'months', 'metadata', 'dictionaries'], 'readonly');
     const configRecords = await requestResult(transaction.objectStore('config').getAll());
     const monthRecords = await requestResult(transaction.objectStore('months').getAll());
     const schemaVersion = await requestResult(transaction.objectStore('metadata').get('schemaVersion'));
@@ -53,23 +60,60 @@ describe('IndexedDB persistence', () => {
     database.close();
   });
 
+  it('stores dictionary values by project and field key', async () => {
+    const indexedDB = new IDBFactory();
+    const databaseName = 'dictionaries-test';
+    await saveDb({ version: 1, config: createDefaultConfig(), months: {} }, { indexedDB, databaseName });
+
+    await saveProjectDictionary('project-1', 'action.description', ['Initial visit', 'Follow-up'], { indexedDB, databaseName });
+    await saveProjectDictionary('project-2', 'action.description', ['Different project'], { indexedDB, databaseName });
+    const projectValues = await loadProjectDictionaries('project-1', { indexedDB, databaseName });
+
+    expect(projectValues).toEqual([{
+      id: JSON.stringify(['project-1', 'action.description']),
+      projectId: 'project-1',
+      fieldKey: 'action.description',
+      values: ['Initial visit', 'Follow-up']
+    }]);
+    expect(await loadAllProjectDictionaries({ indexedDB, databaseName })).toHaveLength(2);
+    await replaceAllProjectDictionaries([
+      { projectId: 'project-1', fieldKey: 'day.area', values: ['Imported value'] }
+    ], { indexedDB, databaseName });
+    expect(await loadProjectDictionaries('project-1', { indexedDB, databaseName })).toEqual([{
+      id: JSON.stringify(['project-1', 'day.area']),
+      projectId: 'project-1',
+      fieldKey: 'day.area',
+      values: ['Imported value']
+    }]);
+    await deleteProjectDictionary('project-1', 'day.area', { indexedDB, databaseName });
+    expect(await loadProjectDictionaries('project-1', { indexedDB, databaseName })).toEqual([]);
+  });
+
   it('migrates the v1 single-record store into the new stores', async () => {
     const indexedDB = new IDBFactory();
     const databaseName = 'migration-test';
+    const config = createDefaultConfig();
     const legacy = {
       version: 1,
-      config: createDefaultConfig(),
-      months: { '2025-12': { days: { '2025-12-01': { notes: 'Migrated' } } } }
+      config,
+      months: {
+        '2025-12': {
+          [config.defaultProfileId]: {
+            [config.defaultProjectId]: { days: { '2025-12-01': { notes: 'Migrated', area: 'School' } } }
+          }
+        }
+      }
     };
     await createLegacyDatabase(indexedDB, databaseName, legacy);
 
     const restored = await loadDb({ indexedDB, databaseName });
     const database = await requestResult(indexedDB.open(databaseName));
-    const transaction = database.transaction(['config', 'months', 'appData', 'metadata'], 'readonly');
+    const transaction = database.transaction(['config', 'months', 'appData', 'metadata', 'dictionaries'], 'readonly');
     const oldRecord = await requestResult(transaction.objectStore('appData').get(STORAGE_KEY));
     const monthRecords = await requestResult(transaction.objectStore('months').getAll());
     const schemaVersion = await requestResult(transaction.objectStore('metadata').get('schemaVersion'));
-    const backup = await requestResult(indexedDB.open(`${databaseName}_backup_${CURRENT_SCHEMA_VERSION}`));
+    const migratedDictionaries = await requestResult<TestDictionaryRecord[]>(transaction.objectStore('dictionaries').index('byProjectId').getAll(legacy.config.defaultProjectId));
+    const backup = await requestResult(indexedDB.open(`${databaseName}_backup_1.0.0`));
     const backupRecord = await requestResult(backup.transaction('appData').objectStore('appData').get(STORAGE_KEY));
 
     expect(restored.months).toEqual(legacy.months);
@@ -77,6 +121,18 @@ describe('IndexedDB persistence', () => {
     expect(monthRecords).toEqual([{ id: '2025-12', data: legacy.months['2025-12'] }]);
     expect(schemaVersion.value).toBe(CURRENT_SCHEMA_VERSION);
     expect(backupRecord).toEqual(legacy);
+    expect(migratedDictionaries).toContainEqual({
+      id: JSON.stringify([legacy.config.defaultProjectId, 'day.notes']),
+      projectId: legacy.config.defaultProjectId,
+      fieldKey: 'day.notes',
+      values: ['Migrated']
+    });
+    expect(migratedDictionaries).toContainEqual({
+      id: JSON.stringify([legacy.config.defaultProjectId, 'day.area']),
+      projectId: legacy.config.defaultProjectId,
+      fieldKey: 'day.area',
+      values: ['School']
+    });
     backup.close();
     database.close();
   });

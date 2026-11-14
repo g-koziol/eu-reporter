@@ -107,6 +107,13 @@ export interface AppDatabase {
   months: Record<string, unknown>;
 }
 
+export interface ProjectDictionary {
+  id: string;
+  projectId: string;
+  fieldKey: string;
+  values: string[];
+}
+
 export interface PdfReportContext {
   currentMonth: string;
   getEffectiveConfig: () => SettingsConfig;
