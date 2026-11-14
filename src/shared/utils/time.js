@@ -1,4 +1,4 @@
-import { DEFAULT_RESOLUTION } from '../config/defaults.js';
+import { DEFAULT_RESOLUTION } from '../../core/config/defaults.js';
 
 export function pad(n) {
   return String(n).padStart(2, '0');

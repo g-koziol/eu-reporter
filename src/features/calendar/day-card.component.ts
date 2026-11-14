@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { actionMinutes, fmtMin, roundTime, stepForResolution } from '../utils/time.js';
+import { actionMinutes, fmtMin, roundTime, stepForResolution } from '../../shared/utils/time.js';
 
 @Component({
   imports: [CommonModule, FormsModule],

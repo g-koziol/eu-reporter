@@ -2,18 +2,24 @@
 
 ## Project overview
 - `index.html` is the Angular CLI document entry point; application markup and bootstrap are under `src/app/`.
-- `src/app/app.ts` and `src/app/app.html` contain the Angular application and its bound UI.
-- `src/app/day-card.component.ts` and `src/app/day-card.component.html` own editable day-card interactions.
-- `src/storage.js` persists the application database to IndexedDB and migrates existing localStorage data.
+- `src/app/app.ts` and `src/app/app.html` are the root coordinator and application shell.
+- `src/core/` owns configuration normalization, application state, and IndexedDB persistence.
+- `src/features/` contains the app shell, calendar/day cards, configuration, batch-entry, data-management, and export features. Keep feature UI and its tests together.
+- `src/shared/` contains reusable UI and cross-feature helpers.
+- `tests/e2e/` contains Playwright browser workflows; `*.spec.ts` files beside source cover component, service, and persistence behavior.
 - `example-config-data.json` shows the expected import/export data shape used by the app.
 - The application UI and labels are in Polish, so keep user-facing text in Polish unless a task explicitly requires otherwise.
 
 ## Change guidelines
 - Prefer small, focused edits that preserve existing user-facing workflows.
-- Reuse existing helpers and patterns from `src/` instead of introducing extra dependencies.
+- Reuse existing helpers and patterns from `src/core/`, `src/features/`, and `src/shared/` instead of introducing extra dependencies.
 - Preserve JSON compatibility for existing data keys such as `config`, `profiles`, `projects`, `months`, `days`, and `actions`.
 - Keep configuration defaults aligned across the app and example data when changing work time, work types, or day fields.
+- When changing IndexedDB stores or versions, preserve and test migration from the prior `appData` record; keep import/export on the existing JSON shape.
+- Keep browser tests isolated from developer data; Playwright uses its own browser contexts and a separate local server.
 
 ## Validation
 - Use `npm run build` to validate the Angular application.
-- For changes to persistence, verify localStorage migration, IndexedDB reload persistence, and unchanged JSON import/export data.
+- Use `npm test` for component, state, and persistence tests.
+- Use `npm run test:e2e` for Playwright workflows covering real browser interactions and reload persistence.
+- For persistence changes, verify the v1 IndexedDB migration, IndexedDB reload persistence, and unchanged JSON import/export data.

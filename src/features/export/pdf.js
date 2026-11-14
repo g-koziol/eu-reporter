@@ -1,5 +1,5 @@
-import { DEFAULT_WORK_FROM, DEFAULT_WORK_TO, DEFAULT_TARGET_HOURS, esc as appEsc } from '../config/defaults.js';
-import { actionMinutes, fmtMin, iso, monthGrid } from '../utils/time.js';
+import { DEFAULT_WORK_FROM, DEFAULT_WORK_TO, DEFAULT_TARGET_HOURS, esc as appEsc } from '../../core/config/defaults.js';
+import { actionMinutes, fmtMin, iso, monthGrid } from '../../shared/utils/time.js';
 
 function defaultEsc(value = '') {
   return String(value).replace(/[&<>\"']/g, (char) => ({

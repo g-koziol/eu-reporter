@@ -1,0 +1,64 @@
+<details class="config-group" open>
+  <summary>{{ kind === 'profile' ? 'Profil' : 'Projekt' }}: {{ owner.name }}</summary>
+  <div class="config-group-body">
+    <label>Nazwa<input [(ngModel)]="owner.name" (ngModelChange)="changed.emit()"></label>
+    <div class="row2">
+      <label>{{ labels.timeResolution }}
+        <select [(ngModel)]="owner.config.timeResolution" (ngModelChange)="changed.emit()"><option value="minute">Minuty</option><option value="30m">30 minut</option><option value="hour">Godziny</option></select>
+      </label>
+      <label>Cel godzin na miesiąc<input type="number" min="0" [(ngModel)]="owner.config.targetHoursPerMonth" (ngModelChange)="changed.emit()"></label>
+    </div>
+    <div class="row2">
+      <label>Domyślny zakres od<input type="time" [(ngModel)]="owner.config.workFrom" (ngModelChange)="changed.emit()"></label>
+      <label>Domyślny zakres do<input type="time" [(ngModel)]="owner.config.workTo" (ngModelChange)="changed.emit()"></label>
+    </div>
+    <label>Liczba kart w rzędzie<input type="number" min="1" max="6" [(ngModel)]="owner.config.cardsPerRow" (ngModelChange)="changed.emit()"></label>
+    <label class="checkbox-label"><input type="checkbox" [(ngModel)]="owner.config.collapseEmptyDaysByDefault" (ngModelChange)="changed.emit()"> Zwijaj puste dni automatycznie</label>
+
+    <h4>Typy działań</h4>
+    @for (workType of owner.config.workTypes; track workType.id; let typeIndex = $index) {
+      <details class="config-group">
+        <summary>{{ workType.name }}</summary>
+        <div class="config-group-body">
+          <label>Nazwa typu<input [(ngModel)]="workType.name" (ngModelChange)="changed.emit()"></label>
+          <div class="row2"><label>Domyślnie od<input type="time" [(ngModel)]="workType.defaultValues.from" (ngModelChange)="changed.emit()"></label><label>Domyślnie do<input type="time" [(ngModel)]="workType.defaultValues.to" (ngModelChange)="changed.emit()"></label></div>
+          <label>Domyślny opis<textarea [(ngModel)]="workType.defaultValues.description" (ngModelChange)="changed.emit()"></textarea></label>
+          <label>Domyślne uwagi<textarea [(ngModel)]="workType.defaultValues.notes" (ngModelChange)="changed.emit()"></textarea></label>
+          <h5>Atrybuty typu</h5>
+          @for (attribute of workType.attributes; track attribute.id; let attributeIndex = $index) {
+            <div class="row2">
+              <label>Etykieta<input [(ngModel)]="attribute.label" (ngModelChange)="changed.emit()"></label>
+              <label>Wartość domyślna<textarea [(ngModel)]="attribute.defaultValue" (ngModelChange)="changed.emit()"></textarea></label>
+              <button class="danger" type="button" (click)="removeItem(workType.attributes, attributeIndex)">Usuń</button>
+            </div>
+          }
+          <button type="button" (click)="addWorkTypeAttribute(workType)">{{ labels.addAttribute }}</button>
+          <button class="danger" type="button" (click)="removeWorkType(typeIndex)">Usuń typ</button>
+        </div>
+      </details>
+    }
+    <button type="button" (click)="addWorkType()">{{ labels.addWorkType }}</button>
+
+    <h4>Pola dnia</h4>
+    @for (field of owner.config.dayFields; track field.id; let fieldIndex = $index) {
+      <div class="row2">
+        <label>Etykieta<input [(ngModel)]="field.label" (ngModelChange)="changed.emit()"></label>
+        <label>Wartość domyślna<textarea [(ngModel)]="field.defaultValue" (ngModelChange)="changed.emit()"></textarea></label>
+        @if (!builtinField(field.id)) { <button class="danger" type="button" (click)="removeItem(owner.config.dayFields, fieldIndex)">Usuń</button> }
+      </div>
+    }
+    <button type="button" (click)="addDayField()">{{ labels.addDayField }}</button>
+
+    <h4>Rekordy współpracy</h4>
+    <label>Tytuł sekcji<input [(ngModel)]="owner.config.collaborationRecords.title" (ngModelChange)="changed.emit()"></label>
+    @for (attribute of owner.config.collaborationRecords.attributes; track attribute.id; let attributeIndex = $index) {
+      <div class="row2">
+        <label>Etykieta<input [(ngModel)]="attribute.label" (ngModelChange)="changed.emit()"></label>
+        <label>Wartość domyślna<textarea [(ngModel)]="attribute.defaultValue" (ngModelChange)="changed.emit()"></textarea></label>
+        <button class="danger" type="button" (click)="removeItem(owner.config.collaborationRecords.attributes, attributeIndex)">Usuń</button>
+      </div>
+    }
+    <button type="button" (click)="addCollaborationAttribute()">{{ labels.addAttribute }}</button>
+    <button class="danger" type="button" [disabled]="!canDelete" (click)="removeRequested.emit()">Usuń {{ kind === 'profile' ? 'profil' : 'projekt' }}</button>
+  </div>
+</details>

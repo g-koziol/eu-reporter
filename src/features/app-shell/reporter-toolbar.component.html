@@ -1,0 +1,44 @@
+<header>
+  <div class="wrap">
+    <div class="toolbar">
+      <strong>{{ labels.title }}</strong>
+      <button class="page-info-btn" type="button" aria-label="Pokaż informacje o stronie" (click)="pageInfoRequested.emit()">i</button>
+      <label style="width:auto">{{ labels.month }}
+        <input type="month" style="width:auto" [ngModel]="currentMonth" (ngModelChange)="monthChanged.emit($event)">
+      </label>
+      <label style="width:auto">{{ labels.profile }}
+        <select style="width:auto" [ngModel]="selectedProfileId" (ngModelChange)="profileChanged.emit($event)">
+          @for (profile of profiles; track profile.id) { <option [value]="profile.id">{{ profile.name }}</option> }
+        </select>
+      </label>
+      <label style="width:auto">{{ labels.project }}
+        <select style="width:auto" [ngModel]="selectedProjectId" (ngModelChange)="projectChanged.emit($event)">
+          @for (project of projects; track project.id) { <option [value]="project.id">{{ project.name }}</option> }
+        </select>
+      </label>
+      <div class="toolbar-menu">
+        <button class="primary" type="button" [attr.aria-expanded]="optionsOpen" (click)="optionsOpen = !optionsOpen">⋯</button>
+        @if (optionsOpen) {
+          <div class="toolbar-menu-panel" role="menu" aria-label="Dodatkowe opcje">
+            <button type="button" (click)="configure()">{{ labels.config }}</button>
+            <button type="button" (click)="exportJsonRequested.emit()">{{ labels.exportJson }}</button>
+            <button type="button" (click)="exportPdfRequested.emit()">{{ labels.exportPdf }}</button>
+            <label class="btn">{{ labels.importJson }}
+              <input type="file" accept="application/json,.json" class="hidden" (change)="importFile($event)">
+            </label>
+            <button class="danger" type="button" (click)="clearMonthRequested.emit()">{{ labels.clearMonth }}</button>
+          </div>
+        }
+      </div>
+    </div>
+    <div [class.limit-over]="totalMinutes > targetHours * 60">
+      <div class="stats">
+        <div class="stat">Wypracowano <b>{{ formatMinutes(totalMinutes) }}</b></div>
+        <div class="stat"><span>Pozostało do {{ targetHours }} h</span> <b>{{ formatMinutes(remainingMinutes) }}</b></div>
+        <div class="stat">Liczba działań <b>{{ totalActions }}</b></div>
+      </div>
+      <div class="progress"><div [style.width.%]="progress"></div></div>
+    </div>
+    <div class="footer-note">Dane zapisują się automatycznie w tej przeglądarce (IndexedDB) i pozostają dostępne przy ponownym wejściu, o ile dane witryny nie zostaną wyczyszczone. Eksport JSON służy jako kopia zapasowa i do przenoszenia danych.</div>
+  </div>
+</header>

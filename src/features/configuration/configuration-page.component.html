@@ -1,0 +1,94 @@
+<main class="wrap config-page">
+  <div class="config-page-head">
+    <h2>{{ labels.config }}</h2>
+    <button class="primary" type="button" (click)="closed.emit()">{{ labels.backToCalendar }}</button>
+  </div>
+  <details class="config-group" open>
+    <summary>{{ labels.globalSettings }}</summary>
+    <div class="config-group-body">
+      <div class="row2">
+        <label>{{ labels.defaultProfile }}
+          <select [(ngModel)]="config.defaultProfileId" (ngModelChange)="profileSelected.emit($event)">
+            @for (profile of config.profiles; track profile.id) { <option [value]="profile.id">{{ profile.name }}</option> }
+          </select>
+        </label>
+        <label>{{ labels.defaultProject }}
+          <select [(ngModel)]="config.defaultProjectId" (ngModelChange)="projectSelected.emit($event)">
+            @for (project of config.projects; track project.id) { <option [value]="project.id">{{ project.name }}</option> }
+          </select>
+        </label>
+      </div>
+      <div class="row2">
+        <label>{{ labels.timeResolution }}
+          <select [(ngModel)]="config.global.timeResolution" (ngModelChange)="changed.emit()">
+            <option value="minute">Minuty</option><option value="30m">30 minut</option><option value="hour">Godziny</option>
+          </select>
+        </label>
+        <label>Ilość kart w rzędzie
+          <input type="number" min="1" max="6" [(ngModel)]="config.global.cardsPerRow" (ngModelChange)="changed.emit()">
+        </label>
+      </div>
+      <div class="row2">
+        <label>Cel godzin na miesiąc
+          <input type="number" min="0" [(ngModel)]="config.global.targetHoursPerMonth" (ngModelChange)="changed.emit()">
+        </label>
+        <label>Domyślny zakres dnia
+          <div class="row2"><input type="time" [(ngModel)]="config.global.workFrom" (ngModelChange)="changed.emit()"><input type="time" [(ngModel)]="config.global.workTo" (ngModelChange)="changed.emit()"></div>
+        </label>
+      </div>
+      <label class="checkbox-label"><input type="checkbox" [(ngModel)]="config.global.collapseEmptyDaysByDefault" (ngModelChange)="changed.emit()"> Zwijaj puste dni automatycznie</label>
+    </div>
+  </details>
+
+  <details class="config-group" open>
+    <summary>{{ labels.labelSectionTitle }}</summary>
+    <div class="config-group-body">
+      <div class="small">{{ labels.labelHints }}</div>
+      @for (key of objectKeys(config.labels); track key) {
+        <label>{{ key }}<input [(ngModel)]="config.labels[key]" (ngModelChange)="changed.emit()"></label>
+      }
+    </div>
+  </details>
+
+  <details class="config-group" open>
+    <summary>{{ pageInfo.title || labels.pageInfoTitle }}</summary>
+    <div class="config-group-body">
+      <label>Tytuł sekcji<input [(ngModel)]="pageInfo.title" (ngModelChange)="changed.emit()"></label>
+      <label>Opis strony<textarea [(ngModel)]="pageInfo.summary" (ngModelChange)="changed.emit()"></textarea></label>
+      <div class="row2">
+        <label>Właściciel / autor<input [(ngModel)]="pageInfo.ownerName" (ngModelChange)="changed.emit()"></label>
+        <label>Link do profilu<input type="url" [(ngModel)]="pageInfo.ownerUrl" (ngModelChange)="changed.emit()"></label>
+      </div>
+      <label>Stopka strony<input [(ngModel)]="pageInfo.footerText" (ngModelChange)="changed.emit()"></label>
+      <h3>{{ labels.aboutCardsLabel }}</h3>
+      @for (card of pageInfo.cards; track card.id; let index = $index) {
+        <div class="action">
+          <label>Tytuł<input [(ngModel)]="card.title" (ngModelChange)="changed.emit()"></label>
+          <label>Treść<textarea [(ngModel)]="card.body" (ngModelChange)="changed.emit()"></textarea></label>
+          <button class="danger" type="button" (click)="removeItem(pageInfo.cards, index)">Usuń kartę</button>
+        </div>
+      }
+      <button type="button" (click)="addAboutCard()">+ Dodaj kartę</button>
+    </div>
+  </details>
+
+  <details class="config-group" open>
+    <summary>{{ labels.profileSettings }}</summary>
+    <div class="config-group-body">
+      @for (profile of config.profiles; track profile.id) {
+        <app-owner-settings [owner]="profile" kind="profile" [labels]="labels" [canDelete]="config.profiles.length > 1" (changed)="changed.emit()" (removeRequested)="removeProfile(profile)"></app-owner-settings>
+      }
+      <button type="button" (click)="addProfile()">{{ labels.addProfile }}</button>
+    </div>
+  </details>
+
+  <details class="config-group" open>
+    <summary>{{ labels.projectSettings }}</summary>
+    <div class="config-group-body">
+      @for (project of config.projects; track project.id) {
+        <app-owner-settings [owner]="project" kind="project" [labels]="labels" [canDelete]="config.projects.length > 1" (changed)="changed.emit()" (removeRequested)="removeProject(project)"></app-owner-settings>
+      }
+      <button type="button" (click)="addProject()">{{ labels.addProject }}</button>
+    </div>
+  </details>
+</main>

@@ -5,6 +5,8 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "test": "ng test --watch=false",
+    "test:e2e": "playwright test",
     "watch": "ng build --watch --configuration development"
   },
   "private": true,
@@ -22,6 +24,10 @@
     "@angular/build": "^22.2.7",
     "@angular/cli": "^22.2.7",
     "@angular/compiler-cli": "^22.2.0",
-    "typescript": "~6.0.2"
+    "@playwright/test": "^1.65.1",
+    "fake-indexeddb": "^6.2.8",
+    "jsdom": "^31.0.1",
+    "typescript": "~6.0.2",
+    "vitest": "^4.1.12"
   }
 }

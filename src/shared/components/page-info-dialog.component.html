@@ -1,0 +1,12 @@
+@if (open) {
+  <div class="modal" (click)="closed.emit()">
+    <div class="modal-panel" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="modal-head"><div><div class="small">O aplikacji</div><h3>{{ pageInfo.title }}</h3></div><button type="button" aria-label="Zamknij" (click)="closed.emit()">✕</button></div>
+      <p>{{ pageInfo.summary }}</p>
+      @if (pageInfo.ownerUrl) { <a [href]="pageInfo.ownerUrl" target="_blank" rel="noopener">{{ pageInfo.ownerName }}</a> }
+      <div class="page-info-grid">
+        @for (card of pageInfo.cards; track card.id) { <div class="page-info-item"><strong>{{ card.title }}</strong><span>{{ card.body }}</span></div> }
+      </div>
+    </div>
+  </div>
+}

@@ -18,7 +18,7 @@ export {
   createDefaultAboutCards,
   defaultPageInfo,
   createDefaultConfig
-} from './config/defaults.js';
+} from './core/config/defaults.js';
 
 export {
   pad,
@@ -31,10 +31,10 @@ export {
   stepForResolution,
   roundTime,
   monthGrid
-} from './utils/time.js';
+} from './shared/utils/time.js';
 
-export { normalizeWorkType, normalizeDayField, normalizeConfig } from './config/normalize.js';
-export { loadDb, saveDb } from './storage.js';
-export { encryptJsonPayload, decryptJsonPayload, isEncryptedFilePayload } from './crypto.js';
-export { buildPdfReportHtml, exportMonthPdf } from './render/pdf.js';
-export { createInitialState } from './state/index.js';
+export { normalizeWorkType, normalizeDayField, normalizeConfig } from './core/config/normalize.js';
+export { loadDb, saveDb } from './core/persistence/indexeddb.js';
+export { encryptJsonPayload, decryptJsonPayload, isEncryptedFilePayload } from './features/data-management/crypto.js';
+export { buildPdfReportHtml, exportMonthPdf } from './features/export/pdf.js';
+export { createInitialState } from './core/state/index.js';

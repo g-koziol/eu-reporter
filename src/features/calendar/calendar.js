@@ -1,5 +1,5 @@
-import { DEFAULT_WORK_FROM, DEFAULT_WORK_TO } from '../config/defaults.js';
-import { fmtMin, actionMinutes } from '../utils/time.js';
+import { DEFAULT_WORK_FROM, DEFAULT_WORK_TO } from '../../core/config/defaults.js';
+import { fmtMin, actionMinutes } from '../../shared/utils/time.js';
 
 export function isMeaningfullyEmpty(day = {}) {
   const values = [

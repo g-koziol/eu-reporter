@@ -1,0 +1,29 @@
+<main class="wrap weeks">
+  <div class="day-nav">
+    <div class="day-nav-strip">
+      @for (entry of monthDays; track entry.key) {
+        <button type="button" class="day-pill" [class.today]="entry.key === today" (click)="scrollToDay(entry.key)">
+          <span class="day-pill-week">{{ entry.weekday }}</span>
+          <span>{{ entry.date | date:'dd' }}</span>
+          <span class="day-pill-total">{{ summary(entry.day).label }}</span>
+        </button>
+      }
+    </div>
+  </div>
+  <div class="calendar-toolbar"><button type="button" (click)="batchRequested.emit()">Masowe dodawanie wpisów</button></div>
+  @for (week of weeks; track $index) {
+    <div class="week" [style.--calendar-cards-per-row]="config.cardsPerRow || 2">
+      @for (entry of week; track entry.key) {
+        <div class="day-anchor" [id]="'day-' + entry.key">
+          <app-day-card
+            [entry]="entry"
+            [config]="config"
+            [collapsed]="entry.day.collapsed"
+            (changed)="changed.emit()"
+            (collapsedChange)="dayCollapsed.emit(entry.day)"
+          ></app-day-card>
+        </div>
+      }
+    </div>
+  }
+</main>
