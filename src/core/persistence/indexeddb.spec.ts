@@ -1,7 +1,7 @@
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import { createDefaultConfig, STORAGE_KEY } from '../config/defaults.js';
-import { loadDb, saveDb } from './indexeddb.js';
+import { CURRENT_SCHEMA_VERSION, loadDb, runSchemaMigrations, saveDb } from './indexeddb.js';
 
 function requestResult<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -41,13 +41,15 @@ describe('IndexedDB persistence', () => {
     await saveDb(source, { indexedDB, databaseName });
     const restored = await loadDb({ indexedDB, databaseName });
     const database = await requestResult(indexedDB.open(databaseName));
-    const transaction = database.transaction(['config', 'months'], 'readonly');
+    const transaction = database.transaction(['config', 'months', 'metadata'], 'readonly');
     const configRecords = await requestResult(transaction.objectStore('config').getAll());
     const monthRecords = await requestResult(transaction.objectStore('months').getAll());
+    const schemaVersion = await requestResult(transaction.objectStore('metadata').get('schemaVersion'));
 
     expect(configRecords).toHaveLength(1);
     expect(monthRecords).toEqual([{ id: '2026-11', data: source.months['2026-11'] }]);
     expect(restored.months).toEqual(source.months);
+    expect(schemaVersion.value).toBe(CURRENT_SCHEMA_VERSION);
     database.close();
   });
 
@@ -63,13 +65,42 @@ describe('IndexedDB persistence', () => {
 
     const restored = await loadDb({ indexedDB, databaseName });
     const database = await requestResult(indexedDB.open(databaseName));
-    const transaction = database.transaction(['config', 'months', 'appData'], 'readonly');
+    const transaction = database.transaction(['config', 'months', 'appData', 'metadata'], 'readonly');
     const oldRecord = await requestResult(transaction.objectStore('appData').get(STORAGE_KEY));
     const monthRecords = await requestResult(transaction.objectStore('months').getAll());
+    const schemaVersion = await requestResult(transaction.objectStore('metadata').get('schemaVersion'));
+    const backup = await requestResult(indexedDB.open(`${databaseName}_backup_${CURRENT_SCHEMA_VERSION}`));
+    const backupRecord = await requestResult(backup.transaction('appData').objectStore('appData').get(STORAGE_KEY));
 
     expect(restored.months).toEqual(legacy.months);
     expect(oldRecord).toBeUndefined();
     expect(monthRecords).toEqual([{ id: '2025-12', data: legacy.months['2025-12'] }]);
+    expect(schemaVersion.value).toBe(CURRENT_SCHEMA_VERSION);
+    expect(backupRecord).toEqual(legacy);
+    backup.close();
+    database.close();
+  });
+
+  it('runs matching semantic-version migrations in ascending order and records the target version', async () => {
+    const indexedDB = new IDBFactory();
+    const databaseName = 'ordered-migrations-test';
+    await saveDb({ version: 1, config: createDefaultConfig(), months: {} }, { indexedDB, databaseName });
+    const database = await requestResult(indexedDB.open(databaseName));
+    const order: string[] = [];
+
+    await runSchemaMigrations(database, {
+      fromVersion: '1.0.0',
+      toVersion: '1.2.0',
+      migrations: [
+        { version: '2.0.0', up: async () => order.push('2.0.0') },
+        { version: '1.2.0', up: async () => order.push('1.2.0') },
+        { version: '1.1.0', up: async () => order.push('1.1.0') }
+      ]
+    });
+
+    const schemaVersion = await requestResult(database.transaction('metadata').objectStore('metadata').get('schemaVersion'));
+    expect(order).toEqual(['1.1.0', '1.2.0']);
+    expect(schemaVersion.value).toBe('1.2.0');
     database.close();
   });
 });

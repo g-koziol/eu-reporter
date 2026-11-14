@@ -15,11 +15,13 @@
 - Reuse existing helpers and patterns from `src/core/`, `src/features/`, and `src/shared/` instead of introducing extra dependencies.
 - Preserve JSON compatibility for existing data keys such as `config`, `profiles`, `projects`, `months`, `days`, and `actions`.
 - Keep configuration defaults aligned across the app and example data when changing work time, work types, or day fields.
-- When changing IndexedDB stores or versions, preserve and test migration from the prior `appData` record; keep import/export on the existing JSON shape.
+- Keep IndexedDB's numeric version for object-store upgrades separate from the semantic `schemaVersion` in `metadata`.
+- For a data-schema change, bump `CURRENT_SCHEMA_VERSION`, add an ordered `SCHEMA_MIGRATIONS` procedure, and preserve the pre-migration backup named `<database>_backup_<version>`.
+- Preserve and test migration from the prior `appData` record; keep import/export on the existing JSON shape.
 - Keep browser tests isolated from developer data; Playwright uses its own browser contexts and a separate local server.
 
 ## Validation
 - Use `npm run build` to validate the Angular application.
 - Use `npm test` for component, state, and persistence tests.
 - Use `npm run test:e2e` for Playwright workflows covering real browser interactions and reload persistence.
-- For persistence changes, verify the v1 IndexedDB migration, IndexedDB reload persistence, and unchanged JSON import/export data.
+- For persistence changes, verify the v1 `appData` migration, stored semantic version, versioned backup contents, IndexedDB reload persistence, and unchanged JSON import/export data.
