@@ -2,7 +2,8 @@
 
 ## Project overview
 - `index.html` is the Angular CLI document entry point; application markup and bootstrap are under `src/app/`.
-- `src/legacy-app.js` currently preserves the existing imperative UI behavior while it is hosted by Angular.
+- `src/app/app.ts` and `src/app/app.html` contain the Angular application and its bound UI.
+- `src/app/day-card.component.ts` and `src/app/day-card.component.html` own editable day-card interactions.
 - `src/storage.js` persists the application database to IndexedDB and migrates existing localStorage data.
 - `example-config-data.json` shows the expected import/export data shape used by the app.
 - The application UI and labels are in Polish, so keep user-facing text in Polish unless a task explicitly requires otherwise.
