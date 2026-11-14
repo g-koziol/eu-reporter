@@ -1,5 +1,11 @@
-@if (!ready) {
-  <main class="wrap weeks"><p>Wczytywanie danych…</p></main>
+@if (!ready()) {
+  <main class="wrap weeks">
+    @if (loadError()) {
+      <div role="alert">Nie udało się wczytać danych: {{ loadError() }} <button type="button" (click)="retryLoad()">Spróbuj ponownie</button></div>
+    } @else {
+      <p>Wczytywanie danych…</p>
+    }
+  </main>
 } @else {
   <header>
     <div class="wrap">
@@ -236,7 +242,7 @@
   }
 
   <footer class="page-footer">{{ pageInfo.footerText }} @if (pageInfo.ownerName) { · Autor: {{ pageInfo.ownerName }} }</footer>
-  @if (toast) { <div class="toast-host" aria-live="polite">{{ toast }}</div> }
+  @if (toast()) { <div class="toast-host" aria-live="polite">{{ toast() }}</div> }
 
   @if (pageInfoOpen) {
     <div class="modal" (click)="pageInfoOpen = false">

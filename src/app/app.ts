@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DayCardComponent } from './day-card.component';
 import {
@@ -46,11 +46,14 @@ const BUILTIN_DAY_FIELDS = ['area', 'nextPlan', 'risks', 'notes'];
   templateUrl: './app.html',
 })
 export class App implements OnInit {
+  constructor(private readonly changeDetector: ChangeDetectorRef) {}
+
   db: any = createDefaultDb();
   currentMonth = ym(new Date());
   selectedProfileId: string | null = null;
   selectedProjectId: string | null = null;
-  ready = false;
+  readonly ready = signal(false);
+  readonly loadError = signal('');
   configOpen = false;
   optionsOpen = false;
   pageInfoOpen = false;
@@ -64,18 +67,28 @@ export class App implements OnInit {
   batchWeekdays = [0, 1, 2, 3, 4];
   readonly weekdays = WEEKDAYS;
   readonly today = iso(new Date());
-  toast = '';
+  readonly toast = signal('');
   private toastTimer?: ReturnType<typeof setTimeout>;
 
   async ngOnInit(): Promise<void> {
+    await this.initialize();
+  }
+
+  async retryLoad(): Promise<void> {
+    this.loadError.set('');
+    await this.initialize();
+  }
+
+  private async initialize(): Promise<void> {
     try {
       this.db = await loadDb();
       this.selectedProfileId = this.db.config.defaultProfileId || this.db.config.profiles[0]?.id || null;
       this.selectedProjectId = this.db.config.defaultProjectId || this.db.config.projects[0]?.id || null;
-      this.ready = true;
       this.ensureMonthDays();
+      this.loadError.set('');
+      this.ready.set(true);
     } catch (error) {
-      this.showToast(`Nie udało się wczytać danych: ${this.errorMessage(error)}`);
+      this.loadError.set(this.errorMessage(error));
     }
   }
 
@@ -366,6 +379,7 @@ export class App implements OnInit {
       this.db = { version: DEFAULT_VERSION, config: normalizeConfig(incoming.config || incoming), months: incoming.months };
       this.selectedProfileId = this.config.defaultProfileId || this.config.profiles[0]?.id || null;
       this.selectedProjectId = this.config.defaultProjectId || this.config.projects[0]?.id || null;
+      this.changeDetector.detectChanges();
       await this.persist();
       this.refreshMonth();
       window.alert('Import zakończony.');
@@ -507,9 +521,9 @@ export class App implements OnInit {
   }
 
   private showToast(message: string): void {
-    this.toast = message;
+    this.toast.set(message);
     if (this.toastTimer) clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => this.toast = '', 2500);
+    this.toastTimer = setTimeout(() => this.toast.set(''), 2500);
   }
 
   private getMonthBucket(): any {
