@@ -11,6 +11,24 @@ function defaultEsc(value = '') {
   }[char]));
 }
 
+function sanitizeTitleSegment(value) {
+  return String(value || '')
+    .replace(/[^\p{L}\p{N}]+/gu, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+export function buildPdfDocumentTitle(context, timestamp = new Date()) {
+  const project = context.getSelectedProject();
+  const profile = context.getSelectedProfile();
+  return [
+    project?.name || 'Projekt',
+    profile?.name || 'Profil',
+    'Raport',
+    context.currentMonth,
+    timestamp.toISOString()
+  ].map(sanitizeTitleSegment).join('_');
+}
+
 export function buildPdfReportHtml(context) {
   const {
     currentMonth,
@@ -137,6 +155,7 @@ export function buildPdfReportHtml(context) {
 
 export function exportMonthPdf(context) {
   const reportHtml = buildPdfReportHtml(context);
+  const title = buildPdfDocumentTitle(context);
   const printWindow = window.open('', '_blank', 'width=1200,height=900');
   if (!printWindow) {
     alert('Przeglądarka zablokowała okno PDF. Zezwól na wyskakujące okna i spróbuj ponownie.');
@@ -145,7 +164,7 @@ export function exportMonthPdf(context) {
 
   const doc = printWindow.document;
   doc.open();
-  doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Raport ${context.currentMonth}</title>
+  doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title>
     <style>
       body { margin: 18px; font-family: Arial, sans-serif; color: #111827; background: #fff; }
       .pdf-report { color: #111827; }
