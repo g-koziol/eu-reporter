@@ -1,51 +1,59 @@
 import { DEFAULT_RESOLUTION } from '../../core/config/defaults.js';
 
-export function pad(n) {
+export type TimeResolution = 'minute' | '30m' | 'hour';
+export type DateInput = Date | string | number;
+
+interface TimedAction {
+  from?: string;
+  to?: string;
+}
+
+export function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-export function iso(date) {
+export function iso(date: DateInput): string {
   const d = date instanceof Date ? date : new Date(date);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-export function ym(date) {
+export function ym(date: DateInput): string {
   const d = date instanceof Date ? date : new Date(date);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
 }
 
-export function timeToMin(value) {
+export function timeToMin(value: string | null | undefined): number | null {
   if (!value || !/^\d{2}:\d{2}$/.test(value)) return null;
   const [hours, minutes] = value.split(':').map(Number);
   return hours * 60 + minutes;
 }
 
-export function actionMinutes(action) {
+export function actionMinutes(action: TimedAction | null | undefined): number {
   const start = timeToMin(action && action.from);
   const end = timeToMin(action && action.to);
   if (start === null || end === null) return 0;
   return end >= start ? end - start : (24 * 60 - start) + end;
 }
 
-export function fmtMin(min) {
+export function fmtMin(min: number): string {
   const rounded = Math.max(0, Math.round(min));
   return `${Math.floor(rounded / 60)}:${pad(rounded % 60)} h`;
 }
 
-export function normalizeResolution(value) {
+export function normalizeResolution(value: unknown): TimeResolution {
   if (value === '30m') return '30m';
   if (value === 'hour') return 'hour';
   return DEFAULT_RESOLUTION;
 }
 
-export function stepForResolution(resolution) {
+export function stepForResolution(resolution: unknown): number {
   const value = normalizeResolution(resolution);
   if (value === 'hour') return 3600;
   if (value === '30m') return 1800;
   return 60;
 }
 
-export function roundTime(value, resolution) {
+export function roundTime(value: string | null | undefined, resolution: unknown): string {
   if (!value || !/^\d{2}:\d{2}$/.test(value)) return value || '';
   const [hours, minutes] = value.split(':').map(Number);
   const total = (hours * 60) + minutes;
@@ -56,7 +64,7 @@ export function roundTime(value, resolution) {
   return `${pad(h)}:${pad(m)}`;
 }
 
-export function monthGrid(key) {
+export function monthGrid(key: string): Date[] {
   const [year, month] = key.split('-').map(Number);
   const first = new Date(year, month - 1, 1);
   const last = new Date(year, month, 0);

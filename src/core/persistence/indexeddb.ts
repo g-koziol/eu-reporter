@@ -1,6 +1,42 @@
 import { compareVersions, validateStrict } from 'compare-versions';
 import { STORAGE_KEY, createDefaultConfig, DEFAULT_VERSION } from '../config/defaults.js';
 import { normalizeConfig } from '../config/normalize.js';
+import type { AppDatabase } from '../models.js';
+
+interface PersistenceOptions {
+  indexedDB?: IDBFactory;
+  storage?: Storage;
+  databaseName?: string;
+}
+
+interface SchemaVersionRecord {
+  key: string;
+  value: string;
+}
+
+interface ConfigRecord {
+  id: string;
+  version: number;
+  config: unknown;
+}
+
+interface MonthRecord {
+  id: string;
+  data: unknown;
+}
+
+interface SchemaMigration {
+  version: string;
+  up: (database: IDBDatabase) => void | Promise<void>;
+}
+
+interface StoreSnapshot {
+  name: string;
+  keyPath: string | string[] | null;
+  autoIncrement: boolean;
+  indexes: Array<{ name: string; keyPath: string | string[]; unique: boolean; multiEntry: boolean }>;
+  records?: Array<{ key: IDBValidKey; value: unknown }>;
+}
 
 const DATABASE_NAME = 'ewidencjaProjektowa';
 const DATABASE_VERSION = 3;
@@ -11,15 +47,15 @@ const LEGACY_STORE_NAME = 'appData';
 const CONFIG_RECORD_ID = 'root';
 const SCHEMA_VERSION_KEY = 'schemaVersion';
 export const CURRENT_SCHEMA_VERSION = '1.0.0';
-const SCHEMA_MIGRATIONS = [];
-const databasePromises = new WeakMap();
-let writeQueue = Promise.resolve();
+const SCHEMA_MIGRATIONS: SchemaMigration[] = [];
+const databasePromises = new WeakMap<IDBFactory, Map<string, Promise<IDBDatabase>>>();
+let writeQueue: Promise<void> = Promise.resolve();
 
-function createDefaultDb() {
+function createDefaultDb(): AppDatabase {
   return { version: DEFAULT_VERSION, config: createDefaultConfig(), months: {} };
 }
 
-function normalizeDb(raw) {
+function normalizeDb(raw: any): AppDatabase {
   if (!raw) return createDefaultDb();
   const migrated = {
     version: DEFAULT_VERSION,
@@ -34,7 +70,7 @@ function normalizeDb(raw) {
   return migrated;
 }
 
-function migrateLegacyRecord(transaction, configStore, monthStore) {
+function migrateLegacyRecord(transaction: IDBTransaction, configStore: IDBObjectStore, monthStore: IDBObjectStore): void {
   if (!transaction.db.objectStoreNames.contains(LEGACY_STORE_NAME)) return;
   const legacyStore = transaction.objectStore(LEGACY_STORE_NAME);
   const request = legacyStore.get(STORAGE_KEY);
@@ -47,7 +83,7 @@ function migrateLegacyRecord(transaction, configStore, monthStore) {
   };
 }
 
-function openDatabase(indexedDB, databaseName) {
+function openDatabase(indexedDB: IDBFactory | undefined, databaseName: string): Promise<IDBDatabase | null> {
   if (!indexedDB) return Promise.resolve(null);
   let databases = databasePromises.get(indexedDB);
   if (!databases) {
@@ -61,40 +97,40 @@ function openDatabase(indexedDB, databaseName) {
     });
     databases.set(databaseName, promise);
   }
-  return databases.get(databaseName);
+  return databases.get(databaseName) ?? Promise.resolve(null);
 }
 
-function requestResult(request) {
+function requestResult<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error || new Error('Operacja na bazie danych nie powiodła się'));
   });
 }
 
-function transactionResult(transaction) {
-  return new Promise((resolve, reject) => {
+function transactionResult(transaction: IDBTransaction): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error || new Error('Transakcja bazy danych nie powiodła się'));
     transaction.onabort = () => reject(transaction.error || new Error('Transakcja bazy danych została przerwana'));
   });
 }
 
-function readSchemaVersion(database) {
+function readSchemaVersion(database: IDBDatabase): Promise<string | null> {
   if (!database.objectStoreNames.contains(METADATA_STORE_NAME)) return Promise.resolve(null);
   const transaction = database.transaction(METADATA_STORE_NAME, 'readonly');
   const complete = transactionResult(transaction);
-  const result = requestResult(transaction.objectStore(METADATA_STORE_NAME).get(SCHEMA_VERSION_KEY));
+  const result = requestResult<SchemaVersionRecord | undefined>(transaction.objectStore(METADATA_STORE_NAME).get(SCHEMA_VERSION_KEY));
   return Promise.all([result, complete]).then(([record]) => record?.value || null);
 }
 
-async function writeSchemaVersion(database, version) {
+async function writeSchemaVersion(database: IDBDatabase, version: string): Promise<void> {
   const transaction = database.transaction(METADATA_STORE_NAME, 'readwrite');
   const complete = transactionResult(transaction);
   transaction.objectStore(METADATA_STORE_NAME).put({ key: SCHEMA_VERSION_KEY, value: version });
   await complete;
 }
 
-function pendingMigrations(fromVersion, toVersion, migrations) {
+function pendingMigrations(fromVersion: string, toVersion: string, migrations: SchemaMigration[]): SchemaMigration[] {
   if (!validateStrict(fromVersion) || !validateStrict(toVersion)) {
     throw new Error('Nieprawidłowa wersja schematu IndexedDB');
   }
@@ -113,11 +149,11 @@ function pendingMigrations(fromVersion, toVersion, migrations) {
     .sort((left, right) => compareVersions(left.version, right.version));
 }
 
-export async function runSchemaMigrations(database, {
+export async function runSchemaMigrations(database: IDBDatabase, {
   fromVersion = CURRENT_SCHEMA_VERSION,
   toVersion = CURRENT_SCHEMA_VERSION,
   migrations = SCHEMA_MIGRATIONS
-} = {}) {
+}: { fromVersion?: string; toVersion?: string; migrations?: SchemaMigration[] } = {}): Promise<void> {
   const pending = pendingMigrations(fromVersion, toVersion, migrations);
   for (const migration of pending) {
     await migration.up(database);
@@ -126,7 +162,7 @@ export async function runSchemaMigrations(database, {
   await writeSchemaVersion(database, toVersion);
 }
 
-async function snapshotDatabase(database) {
+async function snapshotDatabase(database: IDBDatabase): Promise<StoreSnapshot[]> {
   const storeNames = [...database.objectStoreNames];
   if (!storeNames.length) return [];
   const transaction = database.transaction(storeNames, 'readonly');
@@ -156,7 +192,7 @@ async function snapshotDatabase(database) {
   return records;
 }
 
-function createDatabaseBackup(indexedDB, databaseName, version, snapshot) {
+function createDatabaseBackup(indexedDB: IDBFactory, databaseName: string, version: string, snapshot: StoreSnapshot[]): Promise<string> {
   const backupName = `${databaseName}_backup_${version}`;
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(backupName, 1);
@@ -165,7 +201,7 @@ function createDatabaseBackup(indexedDB, databaseName, version, snapshot) {
       if (event.oldVersion !== 0) return;
       created = true;
       for (const definition of snapshot) {
-        const options = { autoIncrement: definition.autoIncrement };
+        const options: IDBObjectStoreParameters = { autoIncrement: definition.autoIncrement };
         if (definition.keyPath !== null) options.keyPath = definition.keyPath;
         const store = request.result.createObjectStore(definition.name, options);
         for (const index of definition.indexes) {
@@ -190,7 +226,7 @@ function createDatabaseBackup(indexedDB, databaseName, version, snapshot) {
       const complete = transactionResult(transaction);
       for (const definition of snapshot) {
         const store = transaction.objectStore(definition.name);
-        for (const record of definition.records) {
+        for (const record of definition.records || []) {
           if (definition.keyPath === null) store.put(record.value, record.key);
           else store.put(record.value);
         }
@@ -208,7 +244,7 @@ function createDatabaseBackup(indexedDB, databaseName, version, snapshot) {
   });
 }
 
-function openExistingDatabase(indexedDB, databaseName) {
+function openExistingDatabase(indexedDB: IDBFactory, databaseName: string): Promise<{ database: IDBDatabase; created: boolean }> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(databaseName);
     let created = false;
@@ -219,12 +255,12 @@ function openExistingDatabase(indexedDB, databaseName) {
   });
 }
 
-function upgradeDatabase(indexedDB, databaseName) {
+function upgradeDatabase(indexedDB: IDBFactory, databaseName: string): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(databaseName, DATABASE_VERSION);
     request.onupgradeneeded = (event) => {
       const database = request.result;
-      const transaction = request.transaction;
+      const transaction = request.transaction!;
       const configStore = database.objectStoreNames.contains(CONFIG_STORE_NAME)
         ? transaction.objectStore(CONFIG_STORE_NAME)
         : database.createObjectStore(CONFIG_STORE_NAME, { keyPath: 'id' });
@@ -242,7 +278,7 @@ function upgradeDatabase(indexedDB, databaseName) {
   });
 }
 
-async function openAndMigrateDatabase(indexedDB, databaseName) {
+async function openAndMigrateDatabase(indexedDB: IDBFactory, databaseName: string): Promise<IDBDatabase> {
   const existing = await openExistingDatabase(indexedDB, databaseName);
   let database = existing.database;
   if (existing.created) {
@@ -273,7 +309,7 @@ async function openAndMigrateDatabase(indexedDB, databaseName) {
   return database;
 }
 
-function readLegacyDb(storage) {
+function readLegacyDb(storage: Storage | undefined): unknown | null {
   try {
     const stored = storage && storage.getItem(STORAGE_KEY);
     return stored ? JSON.parse(stored) : null;
@@ -282,14 +318,14 @@ function readLegacyDb(storage) {
   }
 }
 
-export async function loadDb({ indexedDB = globalThis.indexedDB, storage = globalThis.localStorage, databaseName = DATABASE_NAME } = {}) {
+export async function loadDb({ indexedDB = globalThis.indexedDB, storage = globalThis.localStorage, databaseName = DATABASE_NAME }: PersistenceOptions = {}): Promise<AppDatabase> {
   try {
     const database = await openDatabase(indexedDB, databaseName);
     if (database) {
       const transaction = database.transaction([CONFIG_STORE_NAME, MONTH_STORE_NAME], 'readonly');
       const complete = transactionResult(transaction);
-      const configRequest = requestResult(transaction.objectStore(CONFIG_STORE_NAME).get(CONFIG_RECORD_ID));
-      const monthsRequest = requestResult(transaction.objectStore(MONTH_STORE_NAME).getAll());
+      const configRequest = requestResult<ConfigRecord | undefined>(transaction.objectStore(CONFIG_STORE_NAME).get(CONFIG_RECORD_ID));
+      const monthsRequest = requestResult<MonthRecord[]>(transaction.objectStore(MONTH_STORE_NAME).getAll());
       const [storedConfig, storedMonths] = await Promise.all([configRequest, monthsRequest, complete]);
       if (storedConfig) {
         return normalizeDb({
@@ -317,7 +353,7 @@ export async function loadDb({ indexedDB = globalThis.indexedDB, storage = globa
   return normalizeDb(readLegacyDb(storage));
 }
 
-async function persistDb(snapshot, database) {
+async function persistDb(snapshot: AppDatabase, database: IDBDatabase): Promise<void> {
   const transaction = database.transaction([CONFIG_STORE_NAME, MONTH_STORE_NAME], 'readwrite');
   const complete = transactionResult(transaction);
   transaction.objectStore(CONFIG_STORE_NAME).put({
@@ -331,7 +367,7 @@ async function persistDb(snapshot, database) {
   await complete;
 }
 
-export function saveDb(db, { indexedDB = globalThis.indexedDB, storage = globalThis.localStorage, databaseName = DATABASE_NAME } = {}) {
+export function saveDb(db: AppDatabase, { indexedDB = globalThis.indexedDB, storage = globalThis.localStorage, databaseName = DATABASE_NAME }: PersistenceOptions = {}): Promise<void> {
   const snapshot = JSON.parse(JSON.stringify(db));
   const write = writeQueue.then(async () => {
     const database = await openDatabase(indexedDB, databaseName);

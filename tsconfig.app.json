@@ -3,9 +3,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": [],
-    "allowJs": true,
-    "checkJs": false
+    "types": []
   },
   "include": [
     "src/**/*.ts"

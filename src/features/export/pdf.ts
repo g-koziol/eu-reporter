@@ -1,23 +1,25 @@
-import { DEFAULT_WORK_FROM, DEFAULT_WORK_TO, DEFAULT_TARGET_HOURS, esc as appEsc } from '../../core/config/defaults.js';
+import { DEFAULT_WORK_FROM, DEFAULT_WORK_TO, DEFAULT_TARGET_HOURS } from '../../core/config/defaults.js';
+import type { DayField, DayRecord, PdfReportContext, PdfTitleContext, WorkType } from '../../core/models.js';
 import { actionMinutes, fmtMin, iso, monthGrid } from '../../shared/utils/time.js';
 
-function defaultEsc(value = '') {
-  return String(value).replace(/[&<>\"']/g, (char) => ({
+function defaultEsc(value: unknown = ''): string {
+  const escaped: Record<string, string> = {
     '&': '&amp;',
     '<': '&lt;',
     '>': '&gt;',
     '"': '&quot;',
     "'": '&#39;'
-  }[char]));
+  };
+  return String(value).replace(/[&<>\"']/g, (char) => escaped[char] || char);
 }
 
-function sanitizeTitleSegment(value) {
+function sanitizeTitleSegment(value: unknown): string {
   return String(value || '')
     .replace(/[^\p{L}\p{N}]+/gu, '_')
     .replace(/^_+|_+$/g, '');
 }
 
-export function buildPdfDocumentTitle(context, timestamp = new Date()) {
+export function buildPdfDocumentTitle(context: PdfTitleContext, timestamp = new Date()): string {
   const project = context.getSelectedProject();
   const profile = context.getSelectedProfile();
   return [
@@ -29,7 +31,7 @@ export function buildPdfDocumentTitle(context, timestamp = new Date()) {
   ].map(sanitizeTitleSegment).join('_');
 }
 
-export function buildPdfReportHtml(context) {
+export function buildPdfReportHtml(context: PdfReportContext): string {
   const {
     currentMonth,
     getEffectiveConfig,
@@ -52,7 +54,7 @@ export function buildPdfReportHtml(context) {
     const [year, month] = currentMonth.split('-').map(Number);
     return dateObj.getFullYear() === year && dateObj.getMonth() + 1 === month;
   });
-  const allDays = monthDays.map((dateObj) => {
+  const allDays = monthDays.map((dateObj: Date) => {
     const key = isoFn(dateObj);
     const day = ensureDay(key);
     return { key, day, dateObj };
@@ -63,7 +65,7 @@ export function buildPdfReportHtml(context) {
 
   const daysHtml = allDays.map(({ key, day, dateObj }) => {
     const actions = day.actions || [];
-    const attributes = (cfg.dayFields || []).filter((field) => !['area', 'nextPlan', 'risks', 'notes'].includes(field.id));
+    const attributes: DayField[] = (cfg.dayFields || []).filter((field) => !['area', 'nextPlan', 'risks', 'notes'].includes(field.id));
     const dayFields = attributes.map((field) => {
       const value = day.extra && Object.prototype.hasOwnProperty.call(day.extra, field.id) ? day.extra[field.id] : (day[field.id] || '');
       return value ? `<div class="pdf-row"><div class="pdf-row-label">${esc(field.label || field.id)}</div><div>${esc(String(value))}</div></div>` : '';
@@ -83,7 +85,7 @@ export function buildPdfReportHtml(context) {
         </thead>
         <tbody>
           ${actions.map((action) => {
-            const namedType = (cfg.workTypes || []).find((item) => item.id === action.workType) || (cfg.workTypes || [])[0] || { name: '-' };
+            const namedType: WorkType | { name: string } = (cfg.workTypes || []).find((item) => item.id === action.workType) || (cfg.workTypes || [])[0] || { name: '-' };
             const attrValues = Object.entries(action.attrs || {}).map(([key, value]) => {
               const attr = (cfg.workTypes || []).flatMap((type) => type.attributes || []).find((item) => item.id === key);
               if (!value || !attr) return '';
@@ -110,11 +112,11 @@ export function buildPdfReportHtml(context) {
       day.nextPlan ? { label: 'Plan dalszych działań', value: day.nextPlan } : null,
       day.risks ? { label: 'Trudności / ryzyka', value: day.risks } : null,
       day.notes ? { label: 'Uwagi do dnia', value: day.notes } : null,
-      ...attributes.map((field) => {
+      ...attributes.map((field: DayField) => {
         const value = day.extra && Object.prototype.hasOwnProperty.call(day.extra, field.id) ? day.extra[field.id] : (day[field.id] || '');
         return value ? { label: field.label || field.id, value } : null;
       })
-    ].filter(Boolean);
+    ].filter((row): row is { label: string; value: string } => row !== null);
 
     const fieldsHtml = rows.map((row) => `
       <div class="pdf-row">
@@ -136,7 +138,7 @@ export function buildPdfReportHtml(context) {
   return `
     <div class="pdf-report">
       <div class="pdf-report-header">
-        <h1 class="pdf-report-title">${esc(labels.title || 'Ewidencja działań projektowych')}</h1>
+        <h1 class="pdf-report-title">${esc(labels['title'] || 'Ewidencja działań projektowych')}</h1>
         <div class="pdf-report-meta">
           <span>Miesiąc: ${esc(currentMonth)}</span>
           <span>Profil: ${esc(profile ? profile.name : '-')}</span>
@@ -153,7 +155,7 @@ export function buildPdfReportHtml(context) {
   `;
 }
 
-export function exportMonthPdf(context) {
+export function exportMonthPdf(context: PdfReportContext): void {
   const reportHtml = buildPdfReportHtml(context);
   const title = buildPdfDocumentTitle(context);
   const printWindow = window.open('', '_blank', 'width=1200,height=900');

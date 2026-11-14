@@ -1,4 +1,13 @@
-function toBase64(bytes) {
+interface EncryptedFilePayload {
+  encrypted: true;
+  data: {
+    salt: string;
+    iv: string;
+    ciphertext: string;
+  };
+}
+
+function toBase64(bytes: Uint8Array): string {
   let binary = "";
   const chunkSize = 0x8000;
   for (let index = 0; index < bytes.length; index += chunkSize) {
@@ -8,7 +17,7 @@ function toBase64(bytes) {
   return btoa(binary);
 }
 
-function fromBase64(value) {
+function fromBase64(value: string): Uint8Array<ArrayBuffer> {
   const binary = atob(value);
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) {
@@ -17,7 +26,7 @@ function fromBase64(value) {
   return bytes;
 }
 
-async function deriveKey(password, salt) {
+async function deriveKey(password: string, salt: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
   const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
@@ -41,17 +50,13 @@ async function deriveKey(password, salt) {
   );
 }
 
-export function isEncryptedFilePayload(value) {
-  return Boolean(
-    value &&
-      typeof value === "object" &&
-      value.encrypted === true &&
-      value.data &&
-      typeof value.data === "object"
-  );
+export function isEncryptedFilePayload(value: unknown): value is EncryptedFilePayload {
+  if (!value || typeof value !== 'object') return false;
+  const payload = value as Partial<EncryptedFilePayload>;
+  return payload.encrypted === true && Boolean(payload.data && typeof payload.data === 'object');
 }
 
-export async function encryptJsonPayload(payload, password) {
+export async function encryptJsonPayload(payload: unknown, password: string): Promise<unknown> {
   if (!password) return payload;
 
   const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -74,8 +79,8 @@ export async function encryptJsonPayload(payload, password) {
   };
 }
 
-export async function decryptJsonPayload(bundle, password) {
-  if (!bundle || bundle.encrypted !== true) return bundle;
+export async function decryptJsonPayload(bundle: unknown, password: string): Promise<unknown> {
+  if (!isEncryptedFilePayload(bundle)) return bundle;
   if (!password) {
     throw new Error("Hasło jest wymagane do odszyfrowania pliku.");
   }

@@ -92,9 +92,9 @@ describe('IndexedDB persistence', () => {
       fromVersion: '1.0.0',
       toVersion: '1.2.0',
       migrations: [
-        { version: '2.0.0', up: async () => order.push('2.0.0') },
-        { version: '1.2.0', up: async () => order.push('1.2.0') },
-        { version: '1.1.0', up: async () => order.push('1.1.0') }
+        { version: '2.0.0', up: async () => { order.push('2.0.0'); } },
+        { version: '1.2.0', up: async () => { order.push('1.2.0'); } },
+        { version: '1.1.0', up: async () => { order.push('1.1.0'); } }
       ]
     });
 

@@ -1,27 +1,30 @@
+import type { AboutCard, AppConfig, ConfigurableOwner, DayField, PageInfo, TimeResolution, WorkAttribute, WorkType } from '../models.js';
+
 export const DEFAULT_TARGET_HOURS = 100;
-export const DEFAULT_RESOLUTION = "minute";
+export const DEFAULT_RESOLUTION: TimeResolution = "minute";
 export const DEFAULT_WORK_FROM = "09:00";
 export const DEFAULT_WORK_TO = "17:00";
 export const DEFAULT_VERSION = 1;
 export const STORAGE_KEY = "ewidencjaProjektowa_v1";
 
-export const clone = (value) => JSON.parse(JSON.stringify(value));
+export const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
-export function uid(prefix) {
+export function uid(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
 }
 
-export function esc(value = "") {
-  return String(value).replace(/[&<>\"']/g, (char) => ({
+export function esc(value: unknown = ""): string {
+  const escaped: Record<string, string> = {
     '&': '&amp;',
     '<': '&lt;',
     '>': '&gt;',
     '"': '&quot;',
     "'": '&#39;'
-  }[char]));
+  };
+  return String(value).replace(/[&<>\"']/g, (char) => escaped[char] || char);
 }
 
-export function defaultWorkTypes() {
+export function defaultWorkTypes(): WorkType[] {
   return [
     {
       id: "ops-cooperation",
@@ -56,7 +59,7 @@ export function defaultWorkTypes() {
   ];
 }
 
-export function defaultDayFields() {
+export function defaultDayFields(): DayField[] {
   return [
     { id: "area", label: "Obszar działania", type: "textarea", defaultValue: "" },
     { id: "nextPlan", label: "Plan dalszych działań", type: "textarea", defaultValue: "" },
@@ -65,7 +68,7 @@ export function defaultDayFields() {
   ];
 }
 
-export function defaultCollaborationRecordAttributes() {
+export function defaultCollaborationRecordAttributes(): WorkAttribute[] {
   return [
     { id: "person", label: "Osoba / kontakt", type: "textarea", defaultValue: "" },
     { id: "institution", label: "Instytucja / dział", type: "textarea", defaultValue: "" },
@@ -81,7 +84,7 @@ export function defaultCollaborationRecordConfig() {
   };
 }
 
-export function createProfile(name = "Domyślny profil") {
+export function createProfile(name = "Domyślny profil"): ConfigurableOwner {
   return {
     id: uid("profile"),
     name,
@@ -99,7 +102,7 @@ export function createProfile(name = "Domyślny profil") {
   };
 }
 
-export function createProject(name = "Domyślny projekt") {
+export function createProject(name = "Domyślny projekt"): ConfigurableOwner {
   return {
     id: uid("project"),
     name,
@@ -117,7 +120,7 @@ export function createProject(name = "Domyślny projekt") {
   };
 }
 
-export function createDefaultLabels() {
+export function createDefaultLabels(): Record<string, string> {
   return {
     title: "Ewidencja działań projektowych",
     month: "Miesiąc",
@@ -170,7 +173,7 @@ export function createDefaultLabels() {
   };
 }
 
-export function createDefaultAboutCards() {
+export function createDefaultAboutCards(): AboutCard[] {
   return [
     {
       id: uid("aboutcard"),
@@ -190,7 +193,7 @@ export function createDefaultAboutCards() {
   ];
 }
 
-export function defaultPageInfo() {
+export function defaultPageInfo(): PageInfo {
   return {
     title: "Informacje o stronie",
     summary: "Ta aplikacja służy do ewidencji czasu pracy w ramach projektów i działań. Umożliwia szybkie zapisanie godzin, kontrolę limitu oraz eksport danych do pliku JSON.",
@@ -201,7 +204,7 @@ export function defaultPageInfo() {
   };
 }
 
-export function createDefaultConfig() {
+export function createDefaultConfig(): AppConfig {
   const profile = createProfile();
   const project = createProject();
   return {
